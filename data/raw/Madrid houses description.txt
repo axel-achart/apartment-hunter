@@ -1,0 +1,29 @@
+Context
+The dataset consist listings from popular real estate portals of Madrid.
+
+LOCATION
+Madrid is one of the most visited cities in Europe both by tourists and businesspeople, and it’s where many important local and multinational companies have their headquarters. Therefore Madrid enjoys both a large influx of tourists as well as people seeking to live and work in the city to give their professional careers a boost.
+
+ATTRACTIVE PRICES
+The real estate market has been in a growth phase for a few years now, which means that you can still find properties at very attractive prices (especially compared to other European capitals) but with still good chances of their value appreciating in the future.
+
+HOUSE TYPES
+Individual homes are not common in the city center but do exist in the suburbs. Madrid also has a mix of new construction and existing apartments. Real estate prices in capital cities are generally the most expensive in a country, but it's not the case in Spain. The cost of property in Madrid is well below that of Barcelona and coastal areas.
+
+Content
+Shape of the data: 21742 rows and 58 columns
+
+Data Dictionary
+Variable Name	: Description
+ID : Identifier ID
+title : Title from listing
+subtitle : Neighborhood and city
+sq_mt_built : Square meter built
+sq_mt_useful : Square meter useful
+n_rooms	: Number of rooms
+n_bathrooms : Number of bathrooms
+sq_mt_allotment	: Square meter allotment
+latitude, longitude : Latitude, Longitude (Since portals hide the location mainly NAs)
+raw_address : Address
+is_exact_address_hidden : Boolean values
+buy_price : Target Value
