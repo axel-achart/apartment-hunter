@@ -1,7 +1,7 @@
 # apartment-hunter
 Data Analysis, visualisation, hosting on website the logistic regression
 
-The choice was made to pick the Madrid files
+The choice was made to pick the King county files.
 
 #### The *Data* folder is a folder that has both the raw and cleaned .csv files
 
