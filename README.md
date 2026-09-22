@@ -1,6 +1,7 @@
 # apartment-hunter
-Data Analysis, visualisation, hosting on website the logistic regression
 
+Construire un modèle qui estime le prix de biens immobiliers. Entraîné avec plusieurs modèle de prédiction.
+A partir de plusieurs facteurs comme la superficie, nombre d'étage, nombre de salle, rue et ville etc...
 The choice was made to pick the King county files.
 
 #### The *Data* folder is a folder that has both the raw and cleaned .csv files
