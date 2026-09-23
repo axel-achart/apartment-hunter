@@ -1,0 +1,16 @@
+# Environnements virtuels
+.venv/
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Variables d'environnement
+.env
+.env.local
