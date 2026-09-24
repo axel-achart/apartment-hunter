@@ -1,11 +1,4 @@
 # apartment-hunter
-<<<<<<< HEAD
-
-
-Construire un modèle qui estime le prix de biens immobiliers. Entraîné avec plusieurs modèle de prédiction.
-A partir de plusieurs facteurs comme la superficie, nombre d'étage, nombre de salle, rue et ville etc...
-=======
->>>>>>> develop
 
 Construire un modèle qui estime le prix de biens immobiliers. Entraîné avec plusieurs modèle de prédiction.
 A partir de plusieurs facteurs comme la superficie, nombre d'étage, nombre de salle, rue et ville etc...
@@ -23,8 +16,4 @@ The choice was made to pick the King county files.
 
 #### **notebook.ipnyb** is the jupyter file that has the EDA.
 
-<<<<<<< HEAD
 #### **README.md** is the file that explains our project.
-=======
-#### **README.md** is the file that explains our project.
->>>>>>> develop
