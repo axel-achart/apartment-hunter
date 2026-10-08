@@ -1,0 +1,13 @@
+# Environnement virtuel
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Fichiers système et éditeur
+.DS_Store
+Thumbs.db
+.vscode/
