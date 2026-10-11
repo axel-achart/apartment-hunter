@@ -1,4 +1,7 @@
 pandas
-os
+numpy
 matplotlib
 seaborn
+scikit-learn
+Boruta
+joblib
