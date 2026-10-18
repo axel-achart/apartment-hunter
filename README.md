@@ -205,8 +205,8 @@ The models are compared with three metrics:
 
 | Model | MAE | RMSE | R² |
 | --- | --- | --- | --- |
-| SVR | to be filled | to be filled | to be filled |
-| Random Forest | to be filled | to be filled | to be filled |
+| SVR | 80510 $ | 155399 $ | 0.8572 |
+| Random Forest | 73193 $ | 131262 $ | 0.8793 |
 | Gradient Boosting | to be filled | to be filled | to be filled |
 
 ## Conclusion
