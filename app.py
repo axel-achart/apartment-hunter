@@ -5,9 +5,7 @@ from sklearn.pipeline import Pipeline# Permet de créer un pipeline de transform
 from sklearn.preprocessing import StandardScaler# Permet de standardiser les features
 from sklearn.svm import SVR# Modèle de régression par machines à vecteurs de support
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor #Modèle de régression
-
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor #Modèle de régression gb & rf
 
 #Modèle de régression SVR pour prédire le prix des maisons
 
@@ -91,3 +89,21 @@ print("R²   :", round(r2, 4))
 """Données déjà importées as *df[final features]*"""
 
 print("Modèle Gradient Boosting")
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+
+gb = GradientBoostingRegressor()
+gb.fit(X_train,y_train)
+
+y_pred_log = gb.predict(X_test)
+y_pred = np.exp(y_pred_log)
+y_true = np.exp(y_test)
+
+mae = mean_absolute_error(y_true, y_pred)
+rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+r2 = r2_score(y_test,y_pred_log)
+
+print("MAE  :", round(mae), "$")
+print("RMSE :", round(rmse), "$")
+print("R²   :", round(r2, 4))

@@ -207,7 +207,7 @@ The models are compared with three metrics:
 | --- | --- | --- | --- |
 | SVR | 80510 $ | 155399 $ | 0.8572 |
 | Random Forest | 73193 $ | 131262 $ | 0.8793 |
-| Gradient Boosting | to be filled | to be filled | to be filled |
+| Gradient Boosting | 81205 $ | 151894 $ | 0.8713 |
 
 ## Conclusion
 
