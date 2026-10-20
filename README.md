@@ -473,9 +473,9 @@ Les modèles sont comparés avec trois métriques :
 
 | Modèle | MAE | RMSE | R² |
 | --- | --- | --- | --- |
-| SVR | à compléter | à compléter | à compléter |
-| Random Forest | à compléter | à compléter | à compléter |
-| Gradient Boosting | à compléter | à compléter | à compléter |
+| SVR | 80510 $ | 155399 $ | 0.8572 |
+| Random Forest | 73193 $ | 131262 $ | 0.8793 |
+| Gradient Boosting | 81205 $ | 151894 $ | 0.8713 |
 
 ## Conclusion
 
