@@ -17,10 +17,12 @@ To answer, we clean and explore a real sales dataset, study several regression a
 | `data/raw/` | Raw data (King County and Madrid) and their descriptions |
 | `data/clean/` | Cleaned data (`kc_house_data_clean.csv`) |
 | `data/images/` | Diagrams illustrating the regression algorithms |
-| `notebook.ipynb` | Data cleaning and first visualizations |
-| `analyse.pbix` | Exploratory analysis dashboard made with Power BI |
-| `notebook_conclusion.ipynb` | Study of the regression algorithms, then modeling and conclusion |
-| `app.py` | Flask application (to be completed) |
+| `notebook.ipynb` | Data cleaning, first visualizations and feature selection |
+| `analysis_explo.pbix` | Exploratory analysis dashboard made with Power BI |
+| `notebook_conclusion.ipynb` | Study of the regression algorithms, then training, grid search and comparison of the 3 models |
+| `models/` | Best model saved by `notebook_conclusion.ipynb` (`best_model.joblib`) |
+| `app.py` | Flask application: a form that estimates the price of a house with the saved model |
+| `templates/` | HTML page of the Flask application |
 | `flask.dockerfile` | Dockerfile of the application (to be completed) |
 | `requirements.txt` | Python dependencies |
 
@@ -32,9 +34,9 @@ To answer, we clean and explore a real sales dataset, study several regression a
 | Exploratory analysis (Power BI) | Done |
 | Algorithm study (watch) | Done (`notebook_conclusion.ipynb`) |
 | Feature selection | Done (`notebook.ipynb`) |
-| Model training and comparison | To do |
-| Grid search | To do |
-| Flask application | To do |
+| Model training and comparison | Done (`notebook_conclusion.ipynb`) |
+| Grid search | Done (`notebook_conclusion.ipynb`) |
+| Flask application | First version (`app.py`) |
 | Docker | To do |
 
 ## Approach
@@ -67,11 +69,11 @@ To answer, we clean and explore a real sales dataset, study several regression a
           │            │            │
           └────────────┼────────────┘
                        ▼
-                  Comparison
-                MAE / RMSE / R²
+                  Grid search
                        │
                        ▼
-                  Grid search
+                  Comparison
+                MAE / RMSE / R²
                        │
                        ▼
              Flask application + Docker
@@ -101,7 +103,7 @@ The cleaned file (21,606 rows) is saved in `data/clean/kc_house_data_clean.csv`.
 
 ### Exploratory analysis
 
-The exploratory analysis is in the Power BI dashboard `analyse.pbix`. Main facts from the cleaned data:
+The exploratory analysis is in the Power BI dashboard `analysis_explo.pbix`. Main facts from the cleaned data:
 
 - The median price is **450,000 $** and the mean is 540,000 $. The maximum is 7,700,000 $. The distribution is strongly skewed to the right (skewness of about 4).
 - The price is mostly linked to the **size** and the **quality**: correlation with the living area of 0.70, and with the construction grade of 0.67.
@@ -171,51 +173,75 @@ A good selection must keep the performance with fewer variables. R² of a Random
 
 ### Modeling pipelines
 
-`zipcode` is treated as a categorical variable (One-Hot Encoding). Numerical variables are standardized for the SVR. Tree-based models do not need it.
+The 7 final features are all numerical (`zipcode` was not kept), so there is no encoding step. The SVR measures distances between houses, so its features are standardized (`StandardScaler`) inside a `Pipeline`: the mean and the standard deviation are learned on the training data only. Tree-based models do not need it.
 
 ```text
-                    Data
-                     │
-                     ▼
-              Train / Test Split
-                     │
-                     ▼
-              ColumnTransformer
-             ┌────────┴────────┐
-             │                 │
-         Numerical        Categorical
-             │                 │
-       StandardScaler      OneHotEncoder
-             │                 │
-             └────────┬────────┘
-                      ▼
-       SVR / Random Forest / Gradient Boosting
-                      │
-                      ▼
-                 Prediction
+        Data (7 features, target log(price))
+                       │
+                       ▼
+     Train / Test split (80 / 20, random_state=42)
+                       │
+          ┌────────────┴─────────────┐
+          ▼                          ▼
+    StandardScaler             (no scaling)
+          │                   ┌──────┴──────┐
+          ▼                   ▼             ▼
+         SVR            Random Forest  Gradient Boosting
+          │                   │             │
+          └───────────────────┼─────────────┘
+                              ▼
+          Prediction of log(price) → exp() → price in $
 ```
 
 ### Evaluation and comparison
 
-The models are compared with three metrics:
+The modeling is in `notebook_conclusion.ipynb`. Every model is trained and tested on the same houses (same split, `random_state=42`).
+
+- **Choices** (best settings, best model) are made with the **cross-validation MAE** on the train set (5 parts). It is computed on `log(price)`: 0.13 means a prediction about 13% away from the real price.
+- The **test set** (4,322 houses) is only used at the end, once, to give the final scores.
+
+The final scores use three metrics:
 
 - **MAE**: mean absolute error, in dollars.
 - **RMSE**: root mean squared error, more sensitive to large errors.
-- **R²**: share of the price variance explained by the model.
+- **R²**: share of the price variance explained by the model (computed on `log(price)`).
 
-| Model | MAE | RMSE | R² |
+### Grid search
+
+For each model, the grid search tries every combination of 3 hyperparameters and keeps the one with the best cross-validation MAE.
+
+| Model | Values tested | Best combination | Time |
 | --- | --- | --- | --- |
-| SVR | 80510 $ | 155399 $ | 0.8572 |
-| Random Forest | 73193 $ | 131262 $ | 0.8793 |
-| Gradient Boosting | 81205 $ | 151894 $ | 0.8713 |
+| SVR | `C`: 1, 3, 10, 30 · `gamma`: 0.05, 0.15, 0.5 · `epsilon`: 0.05, 0.1 | `C=3`, `gamma=0.5`, `epsilon=0.05` | 515 s |
+| Random Forest | `n_estimators`: 100, 300, 500 · `max_depth`: 10, 20, None · `max_features`: 0.33, 0.5, 1.0 | `n_estimators=500`, `max_depth=20`, `max_features=0.5` | 797 s |
+| Gradient Boosting | `n_estimators`: 200, 500, 1000 · `learning_rate`: 0.03, 0.1, 0.3 · `max_depth`: 3, 5, 7 | `n_estimators=500`, `learning_rate=0.03`, `max_depth=7` | 455 s |
+
+### Results
+
+| Model | Settings | CV MAE (log) | Test MAE | Test RMSE | Test R² |
+| --- | --- | --- | --- | --- | --- |
+| SVR | default | 0.1484 | 80,510 $ | 155,399 $ | 0.8572 |
+| SVR | grid search | 0.1375 | 76,383 $ | 175,746 $ | 0.8639 |
+| Random Forest | default | 0.1312 | 70,357 $ | 129,835 $ | 0.8827 |
+| Random Forest | grid search | 0.1283 | 69,374 $ | 128,487 $ | 0.8871 |
+| Gradient Boosting | default | 0.1409 | 76,852 $ | 139,662 $ | 0.8708 |
+| **Gradient Boosting** | **grid search** | **0.1261** | **68,455 $** | **124,199 $** | **0.8920** |
+
+- **Gradient Boosting** gains the most from the grid search: its test MAE drops from 76,852 $ to 68,455 $ (-11%). It becomes the best model, on the cross-validation and on the test set.
+- **Random Forest** was already good with its default settings: the gain is small (about 1,000 $).
+- **SVR**: the MAE improves, but the RMSE gets worse (175,746 $ instead of 155,399 $). The tuned SVR is better on most houses, but makes some bigger mistakes, probably on the expensive houses.
+- Several best values are at the **edge of their grid** (`gamma` and `epsilon` for the SVR, `n_estimators` for the Random Forest, `learning_rate` and `max_depth` for the Gradient Boosting): the best value may be outside the grid, so a wider grid could still improve the scores a little.
+
+## Flask application
+
+`app.py` is a small web application. It loads `models/best_model.joblib` once at startup, then shows a form (`templates/index.html`) with the 7 features. When the form is sent, the model predicts `log(price)` and the application applies `exp()` to display the estimated price in dollars. The model is not trained in the application: the training is done in `notebook_conclusion.ipynb`.
 
 ## Conclusion
 
-*To be written once the models are trained and compared.* It will give:
+**Yes, the price can be estimated with an error of about 13%.** The best model is the **Gradient Boosting** tuned by grid search (500 trees, learning rate 0.03, depth 7). On the 4,322 test houses, its average error is **68,455 $**, with an RMSE of 124,199 $ and an R² of 0.892. The grid search reduced its error by 8,397 $ compared with its default settings. It is saved in `models/best_model.joblib` and used by the Flask application.
 
-- **Performance**: the best model, its MAE / RMSE / R², and the gain brought by the grid search.
-- **Limits** already known: a single county and only two years of sales (2014-2015), so prices do not follow the market today; no information such as the interior state or the exact neighborhood; luxury houses are rare, so they are harder to predict.
-- **Possible improvements**: more recent data, other models, more location features (distance to the center, schools), a prediction interval instead of a single value.
+- **Limits**: a single county and only two years of sales (2014-2015), so prices do not follow the market today; no information such as the interior state or the exact neighborhood; luxury houses are rare, so they are harder to predict.
+- **Possible improvements**: more recent data, other models, more location features (distance to the center, schools), a prediction interval instead of a single value, a wider grid search for the settings found at the edge of their grid.
 
 ## Watch
 
@@ -244,26 +270,6 @@ SVR, Random Forest and Gradient Boosting were chosen because they fit our data:
 
 The others were left out: linear, multiple and polynomial regressions are too simple for this non-linear relation (or overfit for the polynomial one), Poisson regression is made for counts and not for prices, and Elastic Net is linear, so it could at most serve as a simple point of comparison.
 
-## Installation and launch
-
-These commands will work once the application and the Dockerfile are finished.
-
-Locally:
-
-```bash
-pip install -r requirements.txt
-python app.py
-```
-
-With Docker:
-
-```bash
-docker build -f flask.dockerfile -t apartment-hunter .
-docker run -p 5000:5000 apartment-hunter
-```
-
-The application is then available at <http://localhost:5000>.
-
 ---
 
 # apartment-hunter
@@ -285,10 +291,12 @@ Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes,
 | `data/raw/` | Données brutes (King County et Madrid) et leurs descriptions |
 | `data/clean/` | Données nettoyées (`kc_house_data_clean.csv`) |
 | `data/images/` | Schémas illustrant les algorithmes de régression |
-| `notebook.ipynb` | Nettoyage des données et premières visualisations |
-| `analyse.pbix` | Dashboard d'analyse exploratoire réalisé avec Power BI |
-| `notebook_conclusion.ipynb` | Étude des algorithmes de régression, puis modélisation et conclusion |
-| `app.py` | Application Flask (à compléter) |
+| `notebook.ipynb` | Nettoyage des données, premières visualisations et sélection des features |
+| `analysis_explo.pbix` | Dashboard d'analyse exploratoire réalisé avec Power BI |
+| `notebook_conclusion.ipynb` | Étude des algorithmes de régression, puis entraînement, grid search et comparaison des 3 modèles |
+| `models/` | Meilleur modèle enregistré par `notebook_conclusion.ipynb` (`best_model.joblib`) |
+| `app.py` | Application Flask : un formulaire qui estime le prix d'une maison avec le modèle enregistré |
+| `templates/` | Page HTML de l'application Flask |
 | `flask.dockerfile` | Dockerfile de l'application (à compléter) |
 | `requirements.txt` | Dépendances Python |
 
@@ -300,9 +308,9 @@ Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes,
 | Analyse exploratoire (Power BI) | Fait |
 | Étude des algorithmes (veille) | Faite (`notebook_conclusion.ipynb`) |
 | Sélection des features | Faite (`notebook.ipynb`) |
-| Entraînement et comparaison des modèles | À faire |
-| Grid search | À faire |
-| Application Flask | À faire |
+| Entraînement et comparaison des modèles | Fait (`notebook_conclusion.ipynb`) |
+| Grid search | Faite (`notebook_conclusion.ipynb`) |
+| Application Flask | Première version (`app.py`) |
 | Docker | À faire |
 
 ## Démarche
@@ -335,11 +343,11 @@ Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes,
           │            │            │
           └────────────┼────────────┘
                        ▼
-                  Comparaison
-                MAE / RMSE / R²
+                  Grid search
                        │
                        ▼
-                  Grid search
+                  Comparaison
+                MAE / RMSE / R²
                        │
                        ▼
              Application Flask + Docker
@@ -369,7 +377,7 @@ Le fichier nettoyé (21 606 lignes) est enregistré dans `data/clean/kc_house_da
 
 ### Analyse exploratoire
 
-L'analyse exploratoire se trouve dans le dashboard Power BI `analyse.pbix`. Principaux constats sur les données nettoyées :
+L'analyse exploratoire se trouve dans le dashboard Power BI `analysis_explo.pbix`. Principaux constats sur les données nettoyées :
 
 - Le prix médian est de **450 000 $** et le prix moyen de 540 000 $. Le maximum atteint 7 700 000 $. La distribution est fortement étalée vers la droite (asymétrie d'environ 4).
 - Le prix est surtout lié à la **taille** et à la **qualité** : corrélation de 0,70 avec la surface habitable et de 0,67 avec le grade de construction.
@@ -439,51 +447,75 @@ Une bonne sélection doit garder la performance avec moins de variables. R² d'u
 
 ### Pipelines de modélisation
 
-`zipcode` est traité comme une variable catégorielle (One-Hot Encoding). Les variables numériques sont standardisées pour le SVR. Les modèles à base d'arbres n'en ont pas besoin.
+Les 7 features finales sont toutes numériques (`zipcode` n'a pas été gardé), il n'y a donc pas d'étape d'encodage. Le SVR mesure des distances entre les maisons : ses variables sont donc standardisées (`StandardScaler`) dans un `Pipeline`, avec une moyenne et un écart-type appris sur les données d'entraînement uniquement. Les modèles à base d'arbres n'en ont pas besoin.
 
 ```text
-                    Data
-                     │
-                     ▼
-              Train / Test Split
-                     │
-                     ▼
-              ColumnTransformer
-             ┌────────┴────────┐
-             │                 │
-        Numériques        Catégorielles
-             │                 │
-       StandardScaler      OneHotEncoder
-             │                 │
-             └────────┬────────┘
-                      ▼
-       SVR / Random Forest / Gradient Boosting
-                      │
-                      ▼
-                 Prédiction
+       Données (7 features, cible log(price))
+                       │
+                       ▼
+   Séparation train / test (80 / 20, random_state=42)
+                       │
+          ┌────────────┴─────────────┐
+          ▼                          ▼
+    StandardScaler          (pas de mise à l'échelle)
+          │                   ┌──────┴──────┐
+          ▼                   ▼             ▼
+         SVR            Random Forest  Gradient Boosting
+          │                   │             │
+          └───────────────────┼─────────────┘
+                              ▼
+       Prédiction de log(price) → exp() → prix en $
 ```
 
 ### Évaluation et comparaison
 
-Les modèles sont comparés avec trois métriques :
+La modélisation se trouve dans `notebook_conclusion.ipynb`. Tous les modèles sont entraînés et testés sur les mêmes maisons (même séparation, `random_state=42`).
+
+- Les **choix** (meilleurs réglages, meilleur modèle) sont faits avec la **MAE en validation croisée** sur le jeu d'entraînement (5 parts). Elle est calculée sur `log(price)` : 0,13 veut dire une prédiction à environ 13 % du vrai prix.
+- Le **jeu de test** (4 322 maisons) ne sert qu'à la fin, une seule fois, pour donner les scores finaux.
+
+Les scores finaux utilisent trois métriques :
 
 - **MAE** : erreur absolue moyenne, en dollars.
 - **RMSE** : racine de l'erreur quadratique moyenne, plus sensible aux grosses erreurs.
-- **R²** : part de la variance du prix expliquée par le modèle.
+- **R²** : part de la variance du prix expliquée par le modèle (calculé sur `log(price)`).
 
-| Modèle | MAE | RMSE | R² |
+### Grid search
+
+Pour chaque modèle, la grid search essaie toutes les combinaisons de 3 hyperparamètres et garde celle qui a la meilleure MAE en validation croisée.
+
+| Modèle | Valeurs testées | Meilleure combinaison | Temps |
 | --- | --- | --- | --- |
-| SVR | 80510 $ | 155399 $ | 0.8572 |
-| Random Forest | 73193 $ | 131262 $ | 0.8793 |
-| Gradient Boosting | 81205 $ | 151894 $ | 0.8713 |
+| SVR | `C` : 1, 3, 10, 30 · `gamma` : 0.05, 0.15, 0.5 · `epsilon` : 0.05, 0.1 | `C=3`, `gamma=0.5`, `epsilon=0.05` | 515 s |
+| Random Forest | `n_estimators` : 100, 300, 500 · `max_depth` : 10, 20, None · `max_features` : 0.33, 0.5, 1.0 | `n_estimators=500`, `max_depth=20`, `max_features=0.5` | 797 s |
+| Gradient Boosting | `n_estimators` : 200, 500, 1000 · `learning_rate` : 0.03, 0.1, 0.3 · `max_depth` : 3, 5, 7 | `n_estimators=500`, `learning_rate=0.03`, `max_depth=7` | 455 s |
+
+### Résultats
+
+| Modèle | Réglages | MAE CV (log) | MAE test | RMSE test | R² test |
+| --- | --- | --- | --- | --- | --- |
+| SVR | par défaut | 0,1484 | 80 510 $ | 155 399 $ | 0,8572 |
+| SVR | grid search | 0,1375 | 76 383 $ | 175 746 $ | 0,8639 |
+| Random Forest | par défaut | 0,1312 | 70 357 $ | 129 835 $ | 0,8827 |
+| Random Forest | grid search | 0,1283 | 69 374 $ | 128 487 $ | 0,8871 |
+| Gradient Boosting | par défaut | 0,1409 | 76 852 $ | 139 662 $ | 0,8708 |
+| **Gradient Boosting** | **grid search** | **0,1261** | **68 455 $** | **124 199 $** | **0,8920** |
+
+- Le **Gradient Boosting** est celui qui gagne le plus avec la grid search : sa MAE de test passe de 76 852 $ à 68 455 $ (-11 %). Il devient le meilleur modèle, en validation croisée comme sur le jeu de test.
+- Le **Random Forest** était déjà bon avec ses réglages par défaut : le gain est faible (environ 1 000 $).
+- **SVR** : la MAE s'améliore, mais la RMSE se dégrade (175 746 $ au lieu de 155 399 $). Le SVR réglé est meilleur sur la plupart des maisons, mais fait quelques erreurs plus grosses, sans doute sur les maisons chères.
+- Plusieurs meilleures valeurs sont au **bord de leur grille** (`gamma` et `epsilon` pour le SVR, `n_estimators` pour le Random Forest, `learning_rate` et `max_depth` pour le Gradient Boosting) : la meilleure valeur est peut-être en dehors de la grille, une grille plus large pourrait donc encore améliorer un peu les scores.
+
+## Application Flask
+
+`app.py` est une petite application web. Elle charge `models/best_model.joblib` une seule fois au démarrage, puis affiche un formulaire (`templates/index.html`) avec les 7 features. Quand le formulaire est envoyé, le modèle prédit `log(price)` et l'application applique `exp()` pour afficher le prix estimé en dollars. Le modèle n'est pas entraîné dans l'application : l'entraînement est fait dans `notebook_conclusion.ipynb`.
 
 ## Conclusion
 
-*À rédiger une fois les modèles entraînés et comparés.* Elle donnera :
+**Oui, le prix peut être estimé avec une erreur d'environ 13 %.** Le meilleur modèle est le **Gradient Boosting** réglé par grid search (500 arbres, learning rate 0,03, profondeur 7). Sur les 4 322 maisons de test, son erreur moyenne est de **68 455 $**, avec une RMSE de 124 199 $ et un R² de 0,892. La grid search a réduit son erreur de 8 397 $ par rapport à ses réglages par défaut. Il est enregistré dans `models/best_model.joblib` et utilisé par l'application Flask.
 
-- **Les performances** : le meilleur modèle, ses MAE / RMSE / R², et le gain apporté par le grid search.
-- **Les limites** déjà connues : un seul comté et seulement deux ans de ventes (2014-2015), donc des prix qui ne suivent pas le marché actuel ; pas d'information sur l'état intérieur ou le quartier exact ; les maisons de luxe sont rares, donc plus difficiles à prédire.
-- **Les pistes d'amélioration** : des données plus récentes, d'autres modèles, plus de variables de localisation (distance au centre, écoles), un intervalle de prédiction plutôt qu'une valeur unique.
+- **Les limites** : un seul comté et seulement deux ans de ventes (2014-2015), donc des prix qui ne suivent pas le marché actuel ; pas d'information sur l'état intérieur ou le quartier exact ; les maisons de luxe sont rares, donc plus difficiles à prédire.
+- **Les pistes d'amélioration** : des données plus récentes, d'autres modèles, plus de variables de localisation (distance au centre, écoles), un intervalle de prédiction plutôt qu'une valeur unique, une grid search plus large pour les réglages trouvés au bord de leur grille.
 
 ## Veille
 
@@ -511,23 +543,3 @@ SVR, Random Forest et Gradient Boosting ont été choisis parce qu'ils convienne
 - Avec environ 21 600 lignes, ces modèles s'entraînent en un temps raisonnable.
 
 Les autres ont été écartés : les régressions linéaire, multiple et polynomiale sont trop simples pour cette relation non linéaire (ou surapprennent pour la polynomiale), la régression de Poisson est faite pour des comptages et non pour des prix, et Elastic Net est linéaire, donc il pourrait au mieux servir de simple point de comparaison.
-
-## Installation et lancement
-
-Ces commandes seront valables une fois l'application et le Dockerfile terminés.
-
-En local :
-
-```bash
-pip install -r requirements.txt
-python app.py
-```
-
-Avec Docker :
-
-```bash
-docker build -f flask.dockerfile -t apartment-hunter .
-docker run -p 5000:5000 apartment-hunter
-```
-
-L'application est ensuite accessible sur <http://localhost:5000>.
