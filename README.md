@@ -32,8 +32,8 @@ To answer, we clean and explore a real sales dataset, study several regression a
 | Exploratory analysis (Power BI) | Done |
 | Algorithm study (watch) | Done (`notebook_conclusion.ipynb`) |
 | Feature selection | Done (`notebook.ipynb`) |
-| Model training and comparison | To do |
-| Grid search | To do |
+| Model training and comparison | Done (`app.py`) |
+| Grid search | Done (`app.py`) |
 | Flask application | To do |
 | Docker | To do |
 
@@ -203,11 +203,32 @@ The models are compared with three metrics:
 - **RMSE**: root mean squared error, more sensitive to large errors.
 - **R²**: share of the price variance explained by the model.
 
-| Model | MAE | RMSE | R² |
-| --- | --- | --- | --- |
-| SVR | 80510 $ | 155399 $ | 0.8572 |
-| Random Forest | 73193 $ | 131262 $ | 0.8793 |
-| Gradient Boosting | 81205 $ | 151894 $ | 0.8713 |
+All models use the same split (`random_state=42`), so the scores are comparable. The scores below are measured on the test set.
+
+| Model | Settings | MAE | RMSE | R² |
+| --- | --- | --- | --- | --- |
+| SVR | default | 80510 $ | 155399 $ | 0.8572 |
+| SVR | grid search | 78636 $ | 147607 $ | 0.8627 |
+| Random Forest | default | 70357 $ | 129835 $ | 0.8827 |
+| Random Forest | grid search | 70233 $ | 129565 $ | 0.8850 |
+| Gradient Boosting | default | 76852 $ | 139662 $ | 0.8708 |
+| Gradient Boosting | grid search | **68109 $** | **121214 $** | **0.8933** |
+
+Settings used before and after the grid search (3-fold cross-validation on the train set):
+
+| Model | Parameter | What it does | Default | Best (grid search) |
+| --- | --- | --- | --- | --- |
+| SVR | `C` | strictness towards errors | 1.0 | **10** |
+| SVR | `epsilon` | error margin tolerated without penalty | 0.1 | 0.1 |
+| SVR | `gamma` | flexibility of the curve | `"scale"` | `"scale"` |
+| Random Forest | `n_estimators` | number of trees | 100 | **300** |
+| Random Forest | `max_depth` | maximum depth of a tree | `None` (no limit) | **20** |
+| Random Forest | `min_samples_leaf` | minimum number of houses in a leaf | 1 | **3** |
+| Gradient Boosting | `n_estimators` | number of trees, built one after the other | 100 | **500** |
+| Gradient Boosting | `learning_rate` | size of the correction made by each tree | 0.1 | **0.05** |
+| Gradient Boosting | `max_depth` | maximum depth of each tree | 3 | **5** |
+
+R² in cross-validation with the best settings: SVR 0.8537, Random Forest 0.8784, Gradient Boosting 0.8881.
 
 ## Conclusion
 
@@ -300,8 +321,8 @@ Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes,
 | Analyse exploratoire (Power BI) | Fait |
 | Étude des algorithmes (veille) | Faite (`notebook_conclusion.ipynb`) |
 | Sélection des features | Faite (`notebook.ipynb`) |
-| Entraînement et comparaison des modèles | À faire |
-| Grid search | À faire |
+| Entraînement et comparaison des modèles | Fait (`app.py`) |
+| Grid search | Fait (`app.py`) |
 | Application Flask | À faire |
 | Docker | À faire |
 
@@ -471,11 +492,32 @@ Les modèles sont comparés avec trois métriques :
 - **RMSE** : racine de l'erreur quadratique moyenne, plus sensible aux grosses erreurs.
 - **R²** : part de la variance du prix expliquée par le modèle.
 
-| Modèle | MAE | RMSE | R² |
-| --- | --- | --- | --- |
-| SVR | à compléter | à compléter | à compléter |
-| Random Forest | à compléter | à compléter | à compléter |
-| Gradient Boosting | à compléter | à compléter | à compléter |
+Tous les modèles utilisent le même découpage (`random_state=42`), les scores sont donc comparables. Les scores ci-dessous sont mesurés sur le jeu de test.
+
+| Modèle | Réglages | MAE | RMSE | R² |
+| --- | --- | --- | --- | --- |
+| SVR | par défaut | 80510 $ | 155399 $ | 0.8572 |
+| SVR | grid search | 78636 $ | 147607 $ | 0.8627 |
+| Random Forest | par défaut | 70357 $ | 129835 $ | 0.8827 |
+| Random Forest | grid search | 70233 $ | 129565 $ | 0.8850 |
+| Gradient Boosting | par défaut | 76852 $ | 139662 $ | 0.8708 |
+| Gradient Boosting | grid search | **68109 $** | **121214 $** | **0.8933** |
+
+Réglages utilisés avant et après le grid search (cross-validation à 3 découpages sur le jeu d'entraînement) :
+
+| Modèle | Paramètre | Rôle | Par défaut | Meilleur (grid search) |
+| --- | --- | --- | --- | --- |
+| SVR | `C` | sévérité envers les erreurs | 1.0 | **10** |
+| SVR | `epsilon` | marge d'erreur tolérée sans pénalité | 0.1 | 0.1 |
+| SVR | `gamma` | souplesse de la courbe | `"scale"` | `"scale"` |
+| Random Forest | `n_estimators` | nombre d'arbres | 100 | **300** |
+| Random Forest | `max_depth` | profondeur maximale d'un arbre | `None` (pas de limite) | **20** |
+| Random Forest | `min_samples_leaf` | nombre minimum de maisons dans une feuille | 1 | **3** |
+| Gradient Boosting | `n_estimators` | nombre d'arbres, construits l'un après l'autre | 100 | **500** |
+| Gradient Boosting | `learning_rate` | taille de la correction de chaque arbre | 0.1 | **0.05** |
+| Gradient Boosting | `max_depth` | profondeur maximale de chaque arbre | 3 | **5** |
+
+R² en cross-validation avec les meilleurs réglages : SVR 0.8537, Random Forest 0.8784, Gradient Boosting 0.8881.
 
 ## Conclusion
 
