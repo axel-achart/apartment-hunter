@@ -23,7 +23,7 @@ To answer, we clean and explore a real sales dataset, study several regression a
 | `models/` | Best model saved by `notebook_conclusion.ipynb` (`best_model.joblib`) |
 | `app.py` | Flask application: a form that estimates the price of a house with the saved model |
 | `templates/` | HTML page of the Flask application |
-| `flask.dockerfile` | Dockerfile of the application (to be completed) |
+| `flask.dockerfile` | Dockerfile of the Flask application |
 | `requirements.txt` | Python dependencies |
 
 ## Progress
@@ -37,7 +37,7 @@ To answer, we clean and explore a real sales dataset, study several regression a
 | Model training and comparison | Done (`notebook_conclusion.ipynb`) |
 | Grid search | Done (`notebook_conclusion.ipynb`) |
 | Flask application | First version (`app.py`) |
-| Docker | To do |
+| Docker | Done (`flask.dockerfile`) |
 
 ## Approach
 
@@ -236,6 +236,19 @@ For each model, the grid search tries every combination of 3 hyperparameters and
 
 `app.py` is a small web application. It loads `models/best_model.joblib` once at startup, then shows a form (`templates/index.html`) with the 7 features. When the form is sent, the model predicts `log(price)` and the application applies `exp()` to display the estimated price in dollars. The model is not trained in the application: the training is done in `notebook_conclusion.ipynb`.
 
+## Docker
+
+`flask.dockerfile` puts the Flask application in a container, so it can be launched without installing Python or the libraries. The image uses Python 3.13 (the same version as our environments) and installs `requirements.txt`, so the library versions are the ones used to train the model (a `.joblib` file may not load with another version of scikit-learn). Only `app.py`, `templates/` and `models/` are copied: the data and the notebooks are not needed to predict.
+
+Build the image, then launch the container:
+
+```
+docker build -f flask.dockerfile -t apartment-hunter .
+docker run -p 5000:5000 apartment-hunter
+```
+
+The application is then available at http://localhost:5000.
+
 ## Conclusion
 
 **Yes, the price can be estimated with an error of about 13%.** The best model is the **Gradient Boosting** tuned by grid search (500 trees, learning rate 0.03, depth 7). On the 4,322 test houses, its average error is **68,455 $**, with an RMSE of 124,199 $ and an R² of 0.892. The grid search reduced its error by 8,397 $ compared with its default settings. It is saved in `models/best_model.joblib` and used by the Flask application.
@@ -297,7 +310,7 @@ Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes,
 | `models/` | Meilleur modèle enregistré par `notebook_conclusion.ipynb` (`best_model.joblib`) |
 | `app.py` | Application Flask : un formulaire qui estime le prix d'une maison avec le modèle enregistré |
 | `templates/` | Page HTML de l'application Flask |
-| `flask.dockerfile` | Dockerfile de l'application (à compléter) |
+| `flask.dockerfile` | Dockerfile de l'application Flask |
 | `requirements.txt` | Dépendances Python |
 
 ## Avancement
@@ -311,7 +324,7 @@ Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes,
 | Entraînement et comparaison des modèles | Fait (`notebook_conclusion.ipynb`) |
 | Grid search | Faite (`notebook_conclusion.ipynb`) |
 | Application Flask | Première version (`app.py`) |
-| Docker | À faire |
+| Docker | Fait (`flask.dockerfile`) |
 
 ## Démarche
 
@@ -509,6 +522,19 @@ Pour chaque modèle, la grid search essaie toutes les combinaisons de 3 hyperpar
 ## Application Flask
 
 `app.py` est une petite application web. Elle charge `models/best_model.joblib` une seule fois au démarrage, puis affiche un formulaire (`templates/index.html`) avec les 7 features. Quand le formulaire est envoyé, le modèle prédit `log(price)` et l'application applique `exp()` pour afficher le prix estimé en dollars. Le modèle n'est pas entraîné dans l'application : l'entraînement est fait dans `notebook_conclusion.ipynb`.
+
+## Docker
+
+`flask.dockerfile` place l'application Flask dans un conteneur, pour pouvoir la lancer sans installer Python ni les bibliothèques. L'image utilise Python 3.13 (la même version que nos environnements) et installe `requirements.txt` : les versions des bibliothèques sont donc celles qui ont servi à entraîner le modèle (un fichier `.joblib` peut ne pas se charger avec une autre version de scikit-learn). Seuls `app.py`, `templates/` et `models/` sont copiés : les données et les notebooks ne servent pas à prédire.
+
+Construire l'image, puis lancer le conteneur :
+
+```
+docker build -f flask.dockerfile -t apartment-hunter .
+docker run -p 5000:5000 apartment-hunter
+```
+
+L'application est ensuite disponible sur http://localhost:5000.
 
 ## Conclusion
 
