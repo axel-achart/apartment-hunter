@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Apartment Hunter</title>
+</head>
+
+
+<body>
+    <center>
+        <h1>Apartment Hunter</h1>
+        <h2>Estimate the price of a house in King County (Seattle)</h2>
+
+        <form method="post">
+            <p>Grade (1 to 13)<br>
+                <input type="number" name="grade" min="1" max="13" value="{{ values['grade'] }}" required>
+            </p>
+
+            <p>Living area (m²)<br>
+                <input type="number" name="sqm_living" step="any" value="{{ values['sqm_living'] }}" required>
+            </p>
+
+            <p>Lot area (m²)<br>
+                <input type="number" name="sqm_lot" step="any" value="{{ values['sqm_lot'] }}" required>
+            </p>
+
+            <p>Waterfront (0 = no, 1 = yes)<br>
+                <input type="number" name="waterfront" min="0" max="1" value="{{ values['waterfront'] }}" required>
+            </p>
+
+            <p>View (0 to 4)<br>
+                <input type="number" name="view" min="0" max="4" value="{{ values['view'] }}" required>
+            </p>
+
+            <p>Latitude<br>
+                <input type="number" name="lat" step="any" value="{{ values['lat'] }}" required>
+            </p>
+
+            <p>Longitude<br>
+                <input type="number" name="long" step="any" value="{{ values['long'] }}" required>
+            </p>
+
+            <button type="submit">Estimate</button>
+        </form>
+
+        {% if price %}
+        <h2>Estimated price: {{ price }} $</h2>
+        {% endif %}
+
+        {% if error %}
+        <p>{{ error }}</p>
+        {% endif %}
+    </center>
+</body>
+
+</html>
