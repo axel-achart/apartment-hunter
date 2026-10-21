@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import joblib # Permet d'enregistrer et de recharger le modèle entraîné
 from sklearn.model_selection import train_test_split, GridSearchCV #Sépare les données / cherche les meilleurs paramètres
 from sklearn.pipeline import Pipeline# Permet de créer un pipeline de transformations et de modèle
 from sklearn.preprocessing import StandardScaler# Permet de standardiser les features
@@ -151,10 +152,10 @@ svr_grid = {
     "svr__epsilon": [0.05, 0.1],
     "svr__gamma": ["scale", 0.1],
 }
-svr_search = GridSearchCV(svr, svr_grid, cv=3, scoring="r2", n_jobs=-1)
+svr_search = GridSearchCV(svr, svr_grid, cv=3, scoring="neg_mean_absolute_error", n_jobs=-1)
 svr_search.fit(X_train, y_train)
 print("Meilleurs paramètres :", svr_search.best_params_)
-print("R² en cross-validation :", round(svr_search.best_score_, 4))
+print("MAE en cross-validation (log) :", round(-svr_search.best_score_, 4))
 evaluate(svr_search.best_estimator_)
 
 
@@ -165,10 +166,10 @@ rf_grid = {
     "max_depth": [10, 20, None],
     "min_samples_leaf": [1, 3],
 }
-rf_search = GridSearchCV(RandomForestRegressor(random_state=42), rf_grid, cv=3, scoring="r2", n_jobs=-1)
+rf_search = GridSearchCV(RandomForestRegressor(random_state=42), rf_grid, cv=3, scoring="neg_mean_absolute_error", n_jobs=-1)
 rf_search.fit(X_train, y_train)
 print("Meilleurs paramètres :", rf_search.best_params_)
-print("R² en cross-validation :", round(rf_search.best_score_, 4))
+print("MAE en cross-validation (log) :", round(-rf_search.best_score_, 4))
 evaluate(rf_search.best_estimator_)
 
 
@@ -179,8 +180,39 @@ gb_grid = {
     "learning_rate": [0.05, 0.1],
     "max_depth": [3, 5],
 }
-gb_search = GridSearchCV(GradientBoostingRegressor(random_state=42), gb_grid, cv=3, scoring="r2", n_jobs=-1)
+gb_search = GridSearchCV(GradientBoostingRegressor(random_state=42), gb_grid, cv=3, scoring="neg_mean_absolute_error", n_jobs=-1)
 gb_search.fit(X_train, y_train)
 print("Meilleurs paramètres :", gb_search.best_params_)
-print("R² en cross-validation :", round(gb_search.best_score_, 4))
+print("MAE en cross-validation (log) :", round(-gb_search.best_score_, 4))
 evaluate(gb_search.best_estimator_)
+
+
+"""********************************************"""
+
+"""Enregistrement du meilleur modèle"""
+
+# On choisit le modèle avec la plus petite erreur (MAE) en cross-validation,
+# le test set ne sert pas à choisir pour ne pas biaiser la note finale
+searches = {
+    "SVR": svr_search,
+    "Random Forest": rf_search,
+    "Gradient Boosting": gb_search,
+}
+# scikit-learn renvoie la MAE en négatif : le plus grand score est donc la plus petite erreur
+best_name = "SVR"
+for name in searches:
+    if searches[name].best_score_ > searches[best_name].best_score_:
+        best_name = name
+best_model = searches[best_name].best_estimator_
+print("\nMeilleur modèle :", best_name)
+
+# Même format que la branche feat/axel : le modèle seul, que l'app Flask charge directement.
+# Il attend les 7 features dans l'ordre de final_features et prédit log(price) :
+# l'app doit appliquer exp() pour avoir un prix en $
+joblib.dump(best_model, "models/best_model.joblib")
+print("Modèle enregistré dans models/best_model.joblib")
+
+# Vérification : le modèle rechargé doit donner exactement les mêmes scores
+saved_model = joblib.load("models/best_model.joblib")
+print("Vérification du modèle rechargé")
+evaluate(saved_model)

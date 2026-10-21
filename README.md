@@ -208,7 +208,7 @@ All models use the same split (`random_state=42`), so the scores are comparable.
 | Model | Settings | MAE | RMSE | R² |
 | --- | --- | --- | --- | --- |
 | SVR | default | 80510 $ | 155399 $ | 0.8572 |
-| SVR | grid search | 78636 $ | 147607 $ | 0.8627 |
+| SVR | grid search | 78834 $ | 147338 $ | 0.8613 |
 | Random Forest | default | 70357 $ | 129835 $ | 0.8827 |
 | Random Forest | grid search | 70233 $ | 129565 $ | 0.8850 |
 | Gradient Boosting | default | 76852 $ | 139662 $ | 0.8708 |
@@ -219,7 +219,7 @@ Settings used before and after the grid search (3-fold cross-validation on the t
 | Model | Parameter | What it does | Default | Best (grid search) |
 | --- | --- | --- | --- | --- |
 | SVR | `C` | strictness towards errors | 1.0 | **10** |
-| SVR | `epsilon` | error margin tolerated without penalty | 0.1 | 0.1 |
+| SVR | `epsilon` | error margin tolerated without penalty | 0.1 | **0.05** |
 | SVR | `gamma` | flexibility of the curve | `"scale"` | `"scale"` |
 | Random Forest | `n_estimators` | number of trees | 100 | **300** |
 | Random Forest | `max_depth` | maximum depth of a tree | `None` (no limit) | **20** |
@@ -228,7 +228,7 @@ Settings used before and after the grid search (3-fold cross-validation on the t
 | Gradient Boosting | `learning_rate` | size of the correction made by each tree | 0.1 | **0.05** |
 | Gradient Boosting | `max_depth` | maximum depth of each tree | 3 | **5** |
 
-R² in cross-validation with the best settings: SVR 0.8537, Random Forest 0.8784, Gradient Boosting 0.8881.
+MAE in cross-validation (on the log of the price) with the best settings: SVR 0.1458, Random Forest 0.1317, Gradient Boosting 0.1281. The model with the smallest error, the Gradient Boosting, is saved in `models/best_model.joblib`.
 
 ## Conclusion
 
@@ -497,7 +497,7 @@ Tous les modèles utilisent le même découpage (`random_state=42`), les scores 
 | Modèle | Réglages | MAE | RMSE | R² |
 | --- | --- | --- | --- | --- |
 | SVR | par défaut | 80510 $ | 155399 $ | 0.8572 |
-| SVR | grid search | 78636 $ | 147607 $ | 0.8627 |
+| SVR | grid search | 78834 $ | 147338 $ | 0.8613 |
 | Random Forest | par défaut | 70357 $ | 129835 $ | 0.8827 |
 | Random Forest | grid search | 70233 $ | 129565 $ | 0.8850 |
 | Gradient Boosting | par défaut | 76852 $ | 139662 $ | 0.8708 |
@@ -508,7 +508,7 @@ Réglages utilisés avant et après le grid search (cross-validation à 3 décou
 | Modèle | Paramètre | Rôle | Par défaut | Meilleur (grid search) |
 | --- | --- | --- | --- | --- |
 | SVR | `C` | sévérité envers les erreurs | 1.0 | **10** |
-| SVR | `epsilon` | marge d'erreur tolérée sans pénalité | 0.1 | 0.1 |
+| SVR | `epsilon` | marge d'erreur tolérée sans pénalité | 0.1 | **0.05** |
 | SVR | `gamma` | souplesse de la courbe | `"scale"` | `"scale"` |
 | Random Forest | `n_estimators` | nombre d'arbres | 100 | **300** |
 | Random Forest | `max_depth` | profondeur maximale d'un arbre | `None` (pas de limite) | **20** |
@@ -517,7 +517,7 @@ Réglages utilisés avant et après le grid search (cross-validation à 3 décou
 | Gradient Boosting | `learning_rate` | taille de la correction de chaque arbre | 0.1 | **0.05** |
 | Gradient Boosting | `max_depth` | profondeur maximale de chaque arbre | 3 | **5** |
 
-R² en cross-validation avec les meilleurs réglages : SVR 0.8537, Random Forest 0.8784, Gradient Boosting 0.8881.
+MAE en cross-validation (sur le log du prix) avec les meilleurs réglages : SVR 0.1458, Random Forest 0.1317, Gradient Boosting 0.1281. Le modèle avec la plus petite erreur, le Gradient Boosting, est enregistré dans `models/best_model.joblib`.
 
 ## Conclusion
 
