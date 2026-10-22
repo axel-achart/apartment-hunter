@@ -38,6 +38,7 @@ To answer, we clean and explore a real sales dataset, study several regression a
 | Grid search | Done (`notebook_conclusion.ipynb`) |
 | Flask application | First version (`app.py`) |
 | Docker | Done (`flask.dockerfile`) |
+| Docker watch | Done (see [Watch](#watch)) |
 
 ## Approach
 
@@ -258,7 +259,7 @@ The application is then available at http://localhost:5000.
 
 ## Watch
 
-The watch is the study of regression algorithms and the choice of the models. The full study, with one diagram per algorithm, is in `notebook_conclusion.ipynb`.
+The watch covers two subjects: the regression algorithms and the choice of the models (the full study, with one diagram per algorithm, is in `notebook_conclusion.ipynb`), then Docker, used to deploy the application.
 
 ### The eight algorithms studied
 
@@ -282,6 +283,43 @@ SVR, Random Forest and Gradient Boosting were chosen because they fit our data:
 - With about 21,600 rows, these models train in a reasonable time.
 
 The others were left out: linear, multiple and polynomial regressions are too simple for this non-linear relation (or overfit for the polynomial one), Poisson regression is made for counts and not for prices, and Elastic Net is linear, so it could at most serve as a simple point of comparison.
+
+### Docker
+
+**What it is.** Docker packages an application with everything it needs (Python, libraries, files) so it runs the same way on any computer. It answers the classic "it works on my machine".
+
+**The key words.**
+
+| Term | Meaning |
+| --- | --- |
+| Dockerfile | Text file with the steps to build the image (here `flask.dockerfile`). |
+| Image | Frozen package built from the Dockerfile. It is the "recipe" ready to use. |
+| Container | A running image. Several containers can be started from the same image. |
+| Docker Hub | Online registry of images (for example the official `python` image we start from). |
+| Layer | Each Dockerfile instruction creates a layer, kept in cache if nothing changed. |
+
+**Container or virtual machine?** A virtual machine emulates a full computer with its own operating system: it is heavy (several GB) and slow to start. A container shares the system kernel of the host: it is light (a few hundred MB) and starts in seconds. That is why containers are widely used to deploy web applications and ML models.
+
+**Why Docker in this project.** The `.joblib` model only loads with the same scikit-learn version as the one used for training. The image fixes Python 3.13 and installs `requirements.txt`, so anyone can launch the application with two commands, without installing Python.
+
+**Good practices applied in `flask.dockerfile`.**
+
+- A `slim` base image, lighter than the full one.
+- `requirements.txt` copied and installed before the code: when only `app.py` changes, Docker reuses the cached library layer and the build is much faster.
+- `pip install --no-cache-dir` so pip's cache does not stay in the image.
+- Only the files needed to predict are copied (`app.py`, `templates/`, `models/`), not the data or the notebooks.
+
+**Useful commands.**
+
+| Command | Purpose |
+| --- | --- |
+| `docker build -f flask.dockerfile -t apartment-hunter .` | Build the image |
+| `docker run -p 5000:5000 apartment-hunter` | Start a container (the port of the PC goes to the port of the container) |
+| `docker ps` | List the running containers |
+| `docker images` | List the images |
+| `docker stop <id>` | Stop a container |
+
+**To go further.** Docker Compose starts several containers together from one `docker-compose.yml` file (for example the application plus a database). Podman is an open-source alternative that uses the same commands. Kubernetes manages many containers on several servers, which is useful for large applications but more than this project needs.
 
 ---
 
@@ -325,6 +363,7 @@ Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes,
 | Grid search | Faite (`notebook_conclusion.ipynb`) |
 | Application Flask | Première version (`app.py`) |
 | Docker | Fait (`flask.dockerfile`) |
+| Veille Docker | Faite (voir [Veille](#veille)) |
 
 ## Démarche
 
@@ -545,7 +584,7 @@ L'application est ensuite disponible sur http://localhost:5000.
 
 ## Veille
 
-La veille est l'étude des algorithmes de régression et le choix des modèles. L'étude complète, avec un schéma par algorithme, se trouve dans `notebook_conclusion.ipynb`.
+La veille porte sur deux sujets : les algorithmes de régression et le choix des modèles (l'étude complète, avec un schéma par algorithme, se trouve dans `notebook_conclusion.ipynb`), puis Docker, utilisé pour déployer l'application.
 
 ### Les huit algorithmes étudiés
 
@@ -569,3 +608,40 @@ SVR, Random Forest et Gradient Boosting ont été choisis parce qu'ils convienne
 - Avec environ 21 600 lignes, ces modèles s'entraînent en un temps raisonnable.
 
 Les autres ont été écartés : les régressions linéaire, multiple et polynomiale sont trop simples pour cette relation non linéaire (ou surapprennent pour la polynomiale), la régression de Poisson est faite pour des comptages et non pour des prix, et Elastic Net est linéaire, donc il pourrait au mieux servir de simple point de comparaison.
+
+### Docker
+
+**Ce que c'est.** Docker emballe une application avec tout ce dont elle a besoin (Python, bibliothèques, fichiers) pour qu'elle tourne de la même façon sur n'importe quel ordinateur. Il répond au classique « ça marche sur ma machine ».
+
+**Le vocabulaire.**
+
+| Terme | Signification |
+| --- | --- |
+| Dockerfile | Fichier texte qui décrit les étapes pour construire l'image (ici `flask.dockerfile`). |
+| Image | Paquet figé construit à partir du Dockerfile. C'est la « recette » prête à l'emploi. |
+| Conteneur | Une image en cours d'exécution. On peut lancer plusieurs conteneurs à partir de la même image. |
+| Docker Hub | Registre en ligne d'images (par exemple l'image officielle `python` dont on part). |
+| Couche (layer) | Chaque instruction du Dockerfile crée une couche, gardée en cache si rien n'a changé. |
+
+**Conteneur ou machine virtuelle ?** Une machine virtuelle émule un ordinateur complet avec son propre système d'exploitation : elle est lourde (plusieurs Go) et lente à démarrer. Un conteneur partage le noyau du système de la machine hôte : il est léger (quelques centaines de Mo) et démarre en quelques secondes. C'est pour cela que les conteneurs sont très utilisés pour déployer des applications web et des modèles de ML.
+
+**Pourquoi Docker dans ce projet.** Le modèle `.joblib` ne se charge qu'avec la même version de scikit-learn que celle de l'entraînement. L'image fixe Python 3.13 et installe `requirements.txt` : n'importe qui peut lancer l'application en deux commandes, sans installer Python.
+
+**Bonnes pratiques appliquées dans `flask.dockerfile`.**
+
+- Une image de base `slim`, plus légère que l'image complète.
+- `requirements.txt` copié et installé avant le code : quand seul `app.py` change, Docker réutilise la couche des bibliothèques en cache et la construction est bien plus rapide.
+- `pip install --no-cache-dir` pour que le cache de pip ne reste pas dans l'image.
+- Seuls les fichiers utiles pour prédire sont copiés (`app.py`, `templates/`, `models/`), pas les données ni les notebooks.
+
+**Commandes utiles.**
+
+| Commande | Rôle |
+| --- | --- |
+| `docker build -f flask.dockerfile -t apartment-hunter .` | Construire l'image |
+| `docker run -p 5000:5000 apartment-hunter` | Lancer un conteneur (le port du PC renvoie vers le port du conteneur) |
+| `docker ps` | Lister les conteneurs en cours |
+| `docker images` | Lister les images |
+| `docker stop <id>` | Arrêter un conteneur |
+
+
