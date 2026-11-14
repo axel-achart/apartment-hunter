@@ -24,3 +24,7 @@ Thumbs.db
 # Claude
 .claude/
 SKILL.md
+
+# Editors and logs
+.idea/
+*.log

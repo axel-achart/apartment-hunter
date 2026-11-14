@@ -1,94 +1,51 @@
+<p align="center">
+  <a href="#english">🇬🇧 English</a> · <a href="#francais">🇫🇷 Français</a>
+</p>
+
+<a id="english"></a>
+
 # apartment-hunter
 
-🇬🇧 English version · [🇫🇷 Version française](#apartment-hunter-1)
+**Estimating the sale price of a house in the Seattle area from 7 characteristics, with a web app that gives the estimate in one click.**
 
-## Context
+🇬🇧 English version · [🇫🇷 Version française](#francais)
+
+## In short
+
+- **Problem:** how much is a house worth? We want a quick and reliable price estimate from a few simple characteristics (size, quality, location).
+- **Data:** 21,613 real house sales in King County (Seattle area, USA), 2014-2015.
+- **Method:** data cleaning, exploration, selection of the 7 most useful characteristics, then comparison of 3 machine learning models, each one tuned automatically.
+- **Result:** the best model estimates the price with an error of about 13% on average. It is used by a small web application where you fill in a form and get an estimated price.
+
+## Context and problem statement
 
 Buying or selling a house starts with one question: what is it worth? An estimate based on a few characteristics (area, quality, location) helps a buyer or an agency to spot a fair price quickly.
 
 **Problem statement:** can we estimate the sale price of a house in King County (Seattle area, USA) from its characteristics, and how accurate can this estimate be?
 
-To answer, we clean and explore a real sales dataset, study several regression algorithms, train and compare three of them, then deploy the best one in a Flask web application, containerized with Docker.
+To answer, we clean and explore a real sales dataset, study several regression algorithms, train and compare three of them, then use the best one in a Flask web application.
 
-## Project structure
+## Data
 
-| File / folder | Purpose |
+| | |
 | --- | --- |
-| `data/raw/` | Raw data (King County and Madrid) and their descriptions |
-| `data/clean/` | Cleaned data (`kc_house_data_clean.csv`) |
-| `data/images/` | Diagrams illustrating the regression algorithms |
-| `notebook.ipynb` | Data cleaning, first visualizations and feature selection |
-| `analysis_explo.pbix` | Exploratory analysis dashboard made with Power BI |
-| `notebook_conclusion.ipynb` | Study of the regression algorithms, then training, grid search and comparison of the 3 models |
-| `models/` | Best model saved by `notebook_conclusion.ipynb` (`best_model.joblib`) |
-| `app.py` | Flask application: a form that estimates the price of a house with the saved model |
-| `templates/` | HTML page of the Flask application |
-| `flask.dockerfile` | Dockerfile of the Flask application |
-| `requirements.txt` | Python dependencies |
+| **Source** | King County house sales dataset (`data/raw/kc_house_data.csv`, description in `data/raw/House sales king county description.txt`) |
+| **Period** | Sales between 2014 and 2015 |
+| **Size** | 21,613 sales, 21 columns. After cleaning: 21,606 sales (`data/clean/kc_house_data_clean.csv`) |
+| **Target** | `price`, the sale price in dollars (modeled as `log(price)`) |
+| **Main variables** | living and lot area, number of bedrooms and bathrooms, floors, construction grade, condition, view, waterfront, year built / renovated, zipcode, latitude, longitude, neighbors' areas |
 
-## Progress
+The Madrid files in `data/raw/` were not used.
 
-| Step | Status |
-| --- | --- |
-| Data cleaning | Done |
-| Exploratory analysis (Power BI) | Done |
-| Algorithm study (watch) | Done (`notebook_conclusion.ipynb`) |
-| Feature selection | Done (`notebook.ipynb`) |
-| Model training and comparison | Done (`notebook_conclusion.ipynb`) |
-| Grid search | Done (`notebook_conclusion.ipynb`) |
-| Flask application | First version (`app.py`) |
-| Docker | Done (`flask.dockerfile`) |
-| Docker watch | Done (see [Watch](#watch)) |
-
-## Approach
+## Method
 
 ```text
-                    DATASET
-                       │
-                       ▼
-                 Data cleaning
-                       │
-                       ▼
-             Exploratory analysis
-                   (Power BI)
-                       │
-          ┌────────────┼────────────┐
-          ▼            ▼            ▼
-       Price ↔      Price ↔      Price ↔
-        Area        Quality      Location
-          │            │            │
-          └────────────┼────────────┘
-                       ▼
-               Feature selection
-                       │
-                       ▼
-               Train / test split
-                       │
-          ┌────────────┼────────────┐
-          ▼            ▼            ▼
-         SVR     Random Forest  Gradient Boosting
-          │            │            │
-          └────────────┼────────────┘
-                       ▼
-                  Grid search
-                       │
-                       ▼
-                  Comparison
-                MAE / RMSE / R²
-                       │
-                       ▼
-             Flask application + Docker
+   Dataset → Cleaning → Exploration (Power BI) → Feature selection
+        → Train / test split → SVR · Random Forest · Gradient Boosting
+        → Grid search → Comparison (MAE / RMSE / R²) → Flask application
 ```
 
-## Data and analysis
-
-### The dataset
-
-The dataset is **King County** (`kc_house_data.csv`): 21,613 house sales between 2014 and 2015, with 21 columns (price, bedrooms, bathrooms, living area, lot area, floors, waterfront, view, condition, grade, year built, year renovated, zipcode, latitude, longitude, and neighbors' areas). The Madrid files in `data/raw/` were not used.
-
-### Data cleaning
-
-Cleaning is done in `notebook.ipynb`:
+### 1. Data cleaning (`notebook.ipynb`)
 
 - **Date**: converted to a date type, then dropped. Sales only cover 2014-2015, so its impact on the price is very low.
 - **Missing values**: none in the dataset, so no imputation is needed.
@@ -100,116 +57,55 @@ Cleaning is done in `notebook.ipynb`:
 - **Outliers**: 217 price outliers are detected by three methods at once (IQR, modified Z-score, percentiles). They are real luxury houses, not errors, so they are kept. Their weight is limited by using `log(price)` as the target and models that are not very sensitive to extreme values.
 - **Standardization**: done inside the modeling pipeline, after the train / test split, to avoid data leakage.
 
-The cleaned file (21,606 rows) is saved in `data/clean/kc_house_data_clean.csv`.
-
-### Exploratory analysis
-
-The exploratory analysis is in the Power BI dashboard `analysis_explo.pbix`. Main facts from the cleaned data:
+### 2. Exploratory analysis (`analysis_explo.pbix`, Power BI)
 
 - The median price is **450,000 $** and the mean is 540,000 $. The maximum is 7,700,000 $. The distribution is strongly skewed to the right (skewness of about 4).
 - The price is mostly linked to the **size** and the **quality**: correlation with the living area of 0.70, and with the construction grade of 0.67.
 - **Location** matters a lot: median price of 1,400,000 $ for waterfront houses against 450,000 $ for the others. Across the 70 zipcodes, the median goes from 235,000 $ (98002) to 1,892,500 $ (98039).
 - The year of construction and the condition have almost no direct link with the price.
 
-An export of the dashboard in a readable format (PDF) is to be added next to the `.pbix` file.
+### 3. Feature selection (`notebook.ipynb`)
 
-## Algorithms used
+We start with 17 candidate variables. Keeping all of them brings noise, redundancy (`sqm_living` and `sqm_above` say almost the same thing) and a model harder to explain. Four selection methods are compared, on the **train set only**, with `log(price)` as the target. `zipcode` is a code and not a quantity, so it is tested separately at the end.
 
-Eight regression algorithms were studied (see [Watch](#watch)). Three were chosen:
+| Method | Principle | Result |
+| --- | --- | --- |
+| **Correlation** | How much each variable moves with the price (from -1 to +1). | `grade` (0.70) and `sqm_living` (0.69) are the most linked. `sqm_living` and `sqm_above` are redundant (0.88). |
+| **Random Forest importance** | How much each variable helps the trees reduce the error. | `grade`, `lat` and `sqm_living` carry about 82% of the importance. |
+| **Boruta** | A variable is kept only if it does better than shuffled copies (pure noise). | Keeps 12 variables out of 17. |
+| **Forward selection** | Adds variables one by one, as long as the score improves enough. | Keeps 7 variables. |
 
-| Algorithm | Principle |
-| --- | --- |
-| **Support Vector Regression (SVR)** | A regression with an error margin (ε-tube): errors inside the margin are not penalized, which makes the model less sensitive to outliers. Needs standardized data. |
-| **Random Forest** | Averages the predictions of many decision trees trained independently on random parts of the data and features. Robust and little sensitive to extreme values. |
-| **Gradient Boosting** | Builds trees one after the other, each one correcting the errors of the previous ones. Often the most accurate on tabular data. |
+We keep the features chosen by **at least 3 methods out of 4**, plus `long` (only 2 votes, but a position needs both coordinates).
 
-### Feature selection
+**Final features (7):** `grade`, `sqm_living`, `sqm_lot`, `waterfront`, `view`, `lat`, `long`, covering **size**, **quality** and **location**.
 
-- **Target:** `y = price` (modeled as `log(price)`).
-- **Excluded:** `price` itself, and `sqm_price_per_living` and `sqm_price_per_lot`, because they are computed from the price and would give the answer to the model.
-- **Candidate features:**
-
-| Group | Variables |
-| --- | --- |
-| Housing characteristics | `bedrooms`, `bathrooms`, `floors`, `sqm_living`, `sqm_lot`, `sqm_above`, `sqm_basement` |
-| Quality | `grade`, `condition`, `view`, `waterfront` |
-| Age / renovation | `yr_built`, `yr_renovated` |
-| Location | `zipcode`, `lat`, `long` |
-| Neighborhood | `sqm_living15`, `sqm_lot15` |
-
-#### Why select features
-
-We start with 17 candidate variables, and keeping all of them causes problems: noise (a useless variable can make the model learn coincidences), redundancy (`sqm_living` and `sqm_above` say almost the same thing) and a heavier, harder to explain model. Each selection method looks at the data from a different angle, so none is reliable alone: we compare four of them, then keep the features they agree on.
-
-The selection is done on the **train set only**, with `log(price)` as the target. `zipcode` is left out of the four methods, because it is a code and not a quantity (98039 is not "bigger" than 98002), so it is tested separately at the end.
-
-#### The four methods
-
-| Method | Principle | Result | Limit |
-| --- | --- | --- | --- |
-| **Correlation** | Measures how much each variable moves with the price (from -1 to +1). | `grade` (0.70) and `sqm_living` (0.69) are the most linked. `condition`, `long` and `yr_built` almost not. `sqm_living` and `sqm_above` are redundant (0.88). | Only sees straight-line links: `long` looks useless although the position matters. |
-| **Random Forest importance** | Measures how much each variable helps the trees of a Random Forest to reduce the error. | `grade`, `lat` and `sqm_living` carry about 82% of the importance. | Similar variables share their importance, so one can look useless while its information is in the other. |
-| **Boruta** | Creates shuffled copies of each variable (pure noise). A variable is kept only if it does better than the best noisy copy. | Keeps 12 variables out of 17. Rejects `bedrooms`, `floors`, `sqm_basement`, `yr_renovated`, `condition`. | The most permissive: keeps anything better than noise, even if barely useful. |
-| **Forward selection** | Starts with no variable and adds, one by one, the one that improves the score the most, until the gain is too small. | Keeps 7 variables: `waterfront`, `view`, `grade`, `lat`, `long`, `sqm_living`, `sqm_lot`. | Slow, and the choice depends on the order of addition. It is the most compact because it avoids redundant variables. |
-
-#### How the final choice was made
-
-Each method votes for the features it keeps. `grade`, `sqm_living` and `lat` get 4 votes out of 4, and `waterfront`, `view` and `sqm_lot` get 3. We keep the features chosen by **at least 3 methods out of 4**, plus `long`: it only has 2 votes, but `lat` alone gives the north-south axis only, and a position needs both coordinates.
-
-**Final features (7):** `grade`, `sqm_living`, `sqm_lot`, `waterfront`, `view`, `lat`, `long`. They cover the three ideas found in the exploration: the **size** (`sqm_living`, `sqm_lot`), the **quality** (`grade`, `view`, `waterfront`) and the **location** (`lat`, `long`).
-
-#### Checks
-
-A good selection must keep the performance with fewer variables. R² of a Random Forest (on the log of the price, cross-validation on the train set; the R² is the share of the price variation explained by the model):
+Check (R² of a Random Forest, cross-validation on the train set, on `log(price)`):
 
 | Features | R² |
 | --- | --- |
 | All 17 features | 0.8805 |
 | The 7 final features | 0.8771 |
 | 6 features, without `long` | 0.8337 |
+| 7 final features + `zipcode` (One-Hot) | 0.8778 |
 
-- With less than half of the variables, the score only drops by 0.003.
-- Removing `long` costs 0.04, which confirms it was right to keep it.
-- **Location:** adding `zipcode` (One-Hot Encoding) gives 0.8778, a gain of 0.0007 only, because `lat` and `long` already describe the location. So `lat` + `long` is kept: simpler, and about 70 columns saved.
+With less than half of the variables, the score only drops by 0.003. `zipcode` adds 0.0007 only, for about 70 extra columns, so `lat` + `long` is kept.
 
-### Modeling pipelines
+### 4. Models tested (`notebook_conclusion.ipynb`)
 
-The 7 final features are all numerical (`zipcode` was not kept), so there is no encoding step. The SVR measures distances between houses, so its features are standardized (`StandardScaler`) inside a `Pipeline`: the mean and the standard deviation are learned on the training data only. Tree-based models do not need it.
+Eight regression algorithms were studied (see [Appendix: watch](#watch)). Three were chosen because the price is very skewed, has strong outliers and non-linear links with the variables:
 
-```text
-        Data (7 features, target log(price))
-                       │
-                       ▼
-     Train / Test split (80 / 20, random_state=42)
-                       │
-          ┌────────────┴─────────────┐
-          ▼                          ▼
-    StandardScaler             (no scaling)
-          │                   ┌──────┴──────┐
-          ▼                   ▼             ▼
-         SVR            Random Forest  Gradient Boosting
-          │                   │             │
-          └───────────────────┼─────────────┘
-                              ▼
-          Prediction of log(price) → exp() → price in $
-```
+| Algorithm | Principle |
+| --- | --- |
+| **Support Vector Regression (SVR)** | A regression with an error margin (ε-tube): errors inside the margin are not penalized. Needs standardized data (`StandardScaler` in a `Pipeline`). |
+| **Random Forest** | Averages the predictions of many decision trees trained independently on random parts of the data. |
+| **Gradient Boosting** | Builds trees one after the other, each one correcting the errors of the previous ones. |
 
-### Evaluation and comparison
+All models use the same split (80 / 20, `random_state=42`): 17,284 houses for training, 4,322 for testing.
 
-The modeling is in `notebook_conclusion.ipynb`. Every model is trained and tested on the same houses (same split, `random_state=42`).
+- **Choices** (settings, best model) are made with the **cross-validation MAE** on the train set (5 folds), computed on `log(price)`: 0.13 means a prediction about 13% away from the real price.
+- The **test set** is only used at the end, once, to give the final scores.
 
-- **Choices** (best settings, best model) are made with the **cross-validation MAE** on the train set (5 parts). It is computed on `log(price)`: 0.13 means a prediction about 13% away from the real price.
-- The **test set** (4,322 houses) is only used at the end, once, to give the final scores.
-
-The final scores use three metrics:
-
-- **MAE**: mean absolute error, in dollars.
-- **RMSE**: root mean squared error, more sensitive to large errors.
-- **R²**: share of the price variance explained by the model (computed on `log(price)`).
-
-### Grid search
-
-For each model, the grid search tries every combination of 3 hyperparameters and keeps the one with the best cross-validation MAE.
+### 5. Grid search
 
 | Model | Values tested | Best combination | Time |
 | --- | --- | --- | --- |
@@ -217,7 +113,15 @@ For each model, the grid search tries every combination of 3 hyperparameters and
 | Random Forest | `n_estimators`: 100, 300, 500 · `max_depth`: 10, 20, None · `max_features`: 0.33, 0.5, 1.0 | `n_estimators=500`, `max_depth=20`, `max_features=0.5` | 797 s |
 | Gradient Boosting | `n_estimators`: 200, 500, 1000 · `learning_rate`: 0.03, 0.1, 0.3 · `max_depth`: 3, 5, 7 | `n_estimators=500`, `learning_rate=0.03`, `max_depth=7` | 455 s |
 
-### Results
+### 6. Final choice
+
+The **Gradient Boosting tuned by grid search** (500 trees, learning rate 0.03, depth 7) has the best cross-validation score, and it is also the best on the test set. It is saved in `models/best_model.joblib` and used by the Flask application.
+
+## Results
+
+**On houses it had never seen, the model estimates the price with an error of about 13% on average, which is about 68,000 $ per house, and it explains about 89% of the price differences between houses.**
+
+Detailed metrics (test set of 4,322 houses; CV MAE and R² computed on `log(price)`):
 
 | Model | Settings | CV MAE (log) | Test MAE | Test RMSE | Test R² |
 | --- | --- | --- | --- | --- | --- |
@@ -228,40 +132,93 @@ For each model, the grid search tries every combination of 3 hyperparameters and
 | Gradient Boosting | default | 0.1409 | 76,852 $ | 139,662 $ | 0.8708 |
 | **Gradient Boosting** | **grid search** | **0.1261** | **68,455 $** | **124,199 $** | **0.8920** |
 
-- **Gradient Boosting** gains the most from the grid search: its test MAE drops from 76,852 $ to 68,455 $ (-11%). It becomes the best model, on the cross-validation and on the test set.
+- **Gradient Boosting** gains the most from the grid search: its test MAE drops from 76,852 $ to 68,455 $ (-11%, i.e. -8,397 $).
 - **Random Forest** was already good with its default settings: the gain is small (about 1,000 $).
-- **SVR**: the MAE improves, but the RMSE gets worse (175,746 $ instead of 155,399 $). The tuned SVR is better on most houses, but makes some bigger mistakes, probably on the expensive houses.
-- Several best values are at the **edge of their grid** (`gamma` and `epsilon` for the SVR, `n_estimators` for the Random Forest, `learning_rate` and `max_depth` for the Gradient Boosting): the best value may be outside the grid, so a wider grid could still improve the scores a little.
+- **SVR**: the MAE improves, but the RMSE gets worse (175,746 $ instead of 155,399 $): better on most houses, but some bigger mistakes, probably on expensive houses.
 
-## Flask application
+## Limits and possible improvements
 
-`app.py` is a small web application. It loads `models/best_model.joblib` once at startup, then shows a form (`templates/index.html`) with the 7 features. When the form is sent, the model predicts `log(price)` and the application applies `exp()` to display the estimated price in dollars. The model is not trained in the application: the training is done in `notebook_conclusion.ipynb`.
+**Limits**
 
-## Docker
+- A single county and only two years of sales (2014-2015): prices do not follow today's market.
+- No information on the interior state or the exact neighborhood.
+- Luxury houses are rare, so they are harder to predict.
 
-`flask.dockerfile` puts the Flask application in a container, so it can be launched without installing Python or the libraries. The image uses Python 3.13 (the same version as our environments) and installs `requirements.txt`, so the library versions are the ones used to train the model (a `.joblib` file may not load with another version of scikit-learn). Only `app.py`, `templates/` and `models/` are copied: the data and the notebooks are not needed to predict.
+**Possible improvements**
 
-Build the image, then launch the container:
+- More recent data, other models, more location features (distance to the center, schools).
+- A prediction interval instead of a single value.
+- A wider grid search: several best values are at the edge of their grid (`gamma` and `epsilon` for the SVR, `n_estimators` for the Random Forest, `learning_rate` and `max_depth` for the Gradient Boosting).
+- **Docker deployment**: a first `flask.dockerfile` is in the repository, but the containerized application has not been validated yet. Finishing and testing it is the next step.
+- An export of the Power BI dashboard in a readable format (PDF) next to the `.pbix` file.
 
+## Repository structure
+
+| File / folder | Purpose |
+| --- | --- |
+| `data/raw/` | Raw data (King County and Madrid) and their descriptions |
+| `data/clean/` | Cleaned data (`kc_house_data_clean.csv`) and a features file (`kc_house_features.csv`) |
+| `data/images/` | Diagrams illustrating the regression algorithms |
+| `notebook.ipynb` | Data cleaning, first visualizations and feature selection |
+| `analysis_explo.pbix` | Exploratory analysis dashboard (Power BI) |
+| `notebook_conclusion.ipynb` | Study of the algorithms, training, grid search and comparison of the 3 models, saving of the best model |
+| `models/best_model.joblib` | Best model (Gradient Boosting, 6.8 MB) |
+| `app.py` | Flask application: a form that estimates the price of a house with the saved model |
+| `templates/index.html` | HTML page of the Flask application |
+| `flask.dockerfile` | First version of the Dockerfile (not validated yet) |
+| `requirements.txt` | Python dependencies |
+
+## Installation and usage
+
+Requires **Python 3.13** (the version used to train the model: the `.joblib` file is only guaranteed to load with the same scikit-learn version, pinned in `requirements.txt`).
+
+```bash
+git clone https://github.com/axel-achart/apartment-hunter.git
+cd apartment-hunter
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
-docker build -f flask.dockerfile -t apartment-hunter .
-docker run -p 5000:5000 apartment-hunter
+
+**Launch the web application:**
+
+```bash
+python app.py
 ```
 
-The application is then available at http://localhost:5000.
+Then open http://localhost:5000, fill in the 7 characteristics and click to get the estimated price. With the default values of the form, the app returns an estimate of 471,336 $.
 
-## Conclusion
+**Open the notebooks:** open `notebook.ipynb` then `notebook_conclusion.ipynb` in VS Code or Jupyter (the `ipykernel` kernel is installed by `requirements.txt`). The outputs are saved in the notebooks, so they can be read without running them. Running the 3 grid searches takes about 30 minutes.
 
-**Yes, the price can be estimated with an error of about 13%.** The best model is the **Gradient Boosting** tuned by grid search (500 trees, learning rate 0.03, depth 7). On the 4,322 test houses, its average error is **68,455 $**, with an RMSE of 124,199 $ and an R² of 0.892. The grid search reduced its error by 8,397 $ compared with its default settings. It is saved in `models/best_model.joblib` and used by the Flask application.
+## Team
 
-- **Limits**: a single county and only two years of sales (2014-2015), so prices do not follow the market today; no information such as the interior state or the exact neighborhood; luxury houses are rare, so they are harder to predict.
-- **Possible improvements**: more recent data, other models, more location features (distance to the center, schools), a prediction interval instead of a single value, a wider grid search for the settings found at the edge of their grid.
+Project made at **LaPlateforme_** (Marseille), **Bachelor AI / Data**, in September and October 2026.
 
-## Watch
+| Name | GitHub |
+| --- | --- |
+| Axel Achart | [axel-achart](https://github.com/axel-achart) |
+| Hippolyte Geslain | [Hippolyte-Geslain](https://github.com/Hippolyte-Geslain) |
+| Kylliann Larcher | [kylliann-larcher](https://github.com/kylliann-larcher) |
 
-The watch covers two subjects: the regression algorithms and the choice of the models (the full study, with one diagram per algorithm, is in `notebook_conclusion.ipynb`), then Docker, used to deploy the application.
+## Tech stack
+
+- **Language:** Python 3.13
+- **Data:** pandas, NumPy
+- **Visualization:** matplotlib, seaborn, Power BI
+- **Machine learning:** scikit-learn (SVR, Random Forest, Gradient Boosting, GridSearchCV, Pipeline), Boruta, joblib
+- **Web application:** Flask, HTML
+- **Tools:** Jupyter notebooks, Git / GitHub, Docker (in progress)
+
+<a id="watch"></a>
+
+## Appendix: watch
 
 ### The eight algorithms studied
+
+The full study, with one diagram per algorithm, is in `notebook_conclusion.ipynb`.
 
 | Algorithm | In one line |
 | --- | --- |
@@ -274,146 +231,72 @@ The watch covers two subjects: the regression algorithms and the choice of the m
 | Random Forest | Averages many independent decision trees to be robust and accurate. |
 | Elastic Net | Linear regression that also shrinks the coefficients (Lasso + Ridge) to remove useless variables. |
 
-### Why these three models
-
-SVR, Random Forest and Gradient Boosting were chosen because they fit our data:
-
-- The price is very skewed and has strong outliers: SVR (error margin) and tree-based models handle it better than a simple linear model.
-- The links between the price and the variables are not linear (for example `grade`, or the location with `lat` and `long`): trees capture them without having to build new variables.
-- With about 21,600 rows, these models train in a reasonable time.
-
-The others were left out: linear, multiple and polynomial regressions are too simple for this non-linear relation (or overfit for the polynomial one), Poisson regression is made for counts and not for prices, and Elastic Net is linear, so it could at most serve as a simple point of comparison.
+**Why SVR, Random Forest and Gradient Boosting:** the price is very skewed with strong outliers (SVR and trees handle it better than a linear model), the links with the variables are not linear (trees capture them directly), and with about 21,600 rows these models train in a reasonable time. Linear, multiple and polynomial regressions are too simple (or overfit), Poisson regression is made for counts, and Elastic Net is linear, so it could at most be a simple baseline.
 
 ### Docker
 
-**What it is.** Docker packages an application with everything it needs (Python, libraries, files) so it runs the same way on any computer. It answers the classic "it works on my machine".
-
-**The key words.**
+**What it is.** Docker packages an application with everything it needs (Python, libraries, files) so it runs the same way on any computer.
 
 | Term | Meaning |
 | --- | --- |
 | Dockerfile | Text file with the steps to build the image (here `flask.dockerfile`). |
-| Image | Frozen package built from the Dockerfile. It is the "recipe" ready to use. |
+| Image | Frozen package built from the Dockerfile. |
 | Container | A running image. Several containers can be started from the same image. |
-| Docker Hub | Online registry of images (for example the official `python` image we start from). |
+| Docker Hub | Online registry of images (for example the official `python` image). |
 | Layer | Each Dockerfile instruction creates a layer, kept in cache if nothing changed. |
 
-**Container or virtual machine?** A virtual machine emulates a full computer with its own operating system: it is heavy (several GB) and slow to start. A container shares the system kernel of the host: it is light (a few hundred MB) and starts in seconds. That is why containers are widely used to deploy web applications and ML models.
+**Container or virtual machine?** A virtual machine emulates a full computer with its own operating system: heavy (several GB) and slow to start. A container shares the kernel of the host: light (a few hundred MB) and starts in seconds.
 
-**Why Docker in this project.** The `.joblib` model only loads with the same scikit-learn version as the one used for training. The image fixes Python 3.13 and installs `requirements.txt`, so anyone can launch the application with two commands, without installing Python.
+**Why Docker in this project.** The `.joblib` model only loads with the same scikit-learn version as the one used for training. An image that fixes Python 3.13 and installs `requirements.txt` would let anyone launch the application without installing Python. The planned commands are `docker build -f flask.dockerfile -t apartment-hunter .` then `docker run -p 5000:5000 apartment-hunter`; this deployment is still to be validated.
 
-**Good practices applied in `flask.dockerfile`.**
-
-- A `slim` base image, lighter than the full one.
-- `requirements.txt` copied and installed before the code: when only `app.py` changes, Docker reuses the cached library layer and the build is much faster.
-- `pip install --no-cache-dir` so pip's cache does not stay in the image.
-- Only the files needed to predict are copied (`app.py`, `templates/`, `models/`), not the data or the notebooks.
-
-**Useful commands.**
-
-| Command | Purpose |
-| --- | --- |
-| `docker build -f flask.dockerfile -t apartment-hunter .` | Build the image |
-| `docker run -p 5000:5000 apartment-hunter` | Start a container (the port of the PC goes to the port of the container) |
-| `docker ps` | List the running containers |
-| `docker images` | List the images |
-| `docker stop <id>` | Stop a container |
-
-**To go further.** Docker Compose starts several containers together from one `docker-compose.yml` file (for example the application plus a database). Podman is an open-source alternative that uses the same commands. Kubernetes manages many containers on several servers, which is useful for large applications but more than this project needs.
+**Good practices targeted in `flask.dockerfile`:** a `slim` base image, `requirements.txt` installed before copying the code (cache reuse), `pip install --no-cache-dir`, and only the files needed to predict copied (`app.py`, `templates/`, `models/`).
 
 ---
 
+<a id="francais"></a>
+
 # apartment-hunter
 
-[🇬🇧 English version](#apartment-hunter) · 🇫🇷 Version française
+**Estimer le prix de vente d'une maison de la région de Seattle à partir de 7 caractéristiques, avec une application web qui donne l'estimation en un clic.**
 
-## Contexte
+[🇬🇧 English version](#english) · 🇫🇷 Version française
+
+## En bref
+
+- **Problème :** combien vaut une maison ? Nous voulons une estimation de prix rapide et fiable à partir de quelques caractéristiques simples (taille, qualité, localisation).
+- **Données :** 21 613 ventes réelles de maisons dans le comté de King (région de Seattle, États-Unis), en 2014-2015.
+- **Méthode :** nettoyage des données, exploration, sélection des 7 caractéristiques les plus utiles, puis comparaison de 3 modèles de machine learning, chacun réglé automatiquement.
+- **Résultat :** le meilleur modèle estime le prix avec une erreur d'environ 13 % en moyenne. Il est utilisé par une petite application web : on remplit un formulaire et on obtient un prix estimé.
+
+## Contexte et problématique
 
 Acheter ou vendre une maison commence par une question : combien vaut-elle ? Une estimation fondée sur quelques caractéristiques (surface, qualité, localisation) aide un acheteur ou une agence à repérer rapidement un prix correct.
 
 **Problématique :** peut-on estimer le prix de vente d'une maison du comté de King (région de Seattle, États-Unis) à partir de ses caractéristiques, et avec quelle précision ?
 
-Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes, étudions plusieurs algorithmes de régression, entraînons et comparons trois d'entre eux, puis déployons le meilleur dans une application web Flask, conteneurisée avec Docker.
+Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes, étudions plusieurs algorithmes de régression, entraînons et comparons trois d'entre eux, puis utilisons le meilleur dans une application web Flask.
 
-## Structure du projet
+## Données
 
-| Fichier / dossier | Rôle |
+| | |
 | --- | --- |
-| `data/raw/` | Données brutes (King County et Madrid) et leurs descriptions |
-| `data/clean/` | Données nettoyées (`kc_house_data_clean.csv`) |
-| `data/images/` | Schémas illustrant les algorithmes de régression |
-| `notebook.ipynb` | Nettoyage des données, premières visualisations et sélection des features |
-| `analysis_explo.pbix` | Dashboard d'analyse exploratoire réalisé avec Power BI |
-| `notebook_conclusion.ipynb` | Étude des algorithmes de régression, puis entraînement, grid search et comparaison des 3 modèles |
-| `models/` | Meilleur modèle enregistré par `notebook_conclusion.ipynb` (`best_model.joblib`) |
-| `app.py` | Application Flask : un formulaire qui estime le prix d'une maison avec le modèle enregistré |
-| `templates/` | Page HTML de l'application Flask |
-| `flask.dockerfile` | Dockerfile de l'application Flask |
-| `requirements.txt` | Dépendances Python |
+| **Source** | Jeu de données des ventes de maisons du comté de King (`data/raw/kc_house_data.csv`, description dans `data/raw/House sales king county description.txt`) |
+| **Période** | Ventes entre 2014 et 2015 |
+| **Taille** | 21 613 ventes, 21 colonnes. Après nettoyage : 21 606 ventes (`data/clean/kc_house_data_clean.csv`) |
+| **Cible** | `price`, le prix de vente en dollars (modélisé sous la forme `log(price)`) |
+| **Principales variables** | surface habitable et du terrain, nombre de chambres et de salles de bain, étages, grade de construction, état, vue, front de mer, année de construction / rénovation, code postal, latitude, longitude, surfaces des voisins |
 
-## Avancement
+Les fichiers Madrid présents dans `data/raw/` n'ont pas été utilisés.
 
-| Étape | État |
-| --- | --- |
-| Nettoyage des données | Fait |
-| Analyse exploratoire (Power BI) | Fait |
-| Étude des algorithmes (veille) | Faite (`notebook_conclusion.ipynb`) |
-| Sélection des features | Faite (`notebook.ipynb`) |
-| Entraînement et comparaison des modèles | Fait (`notebook_conclusion.ipynb`) |
-| Grid search | Faite (`notebook_conclusion.ipynb`) |
-| Application Flask | Première version (`app.py`) |
-| Docker | Fait (`flask.dockerfile`) |
-| Veille Docker | Faite (voir [Veille](#veille)) |
-
-## Démarche
+## Méthode
 
 ```text
-                    DATASET
-                       │
-                       ▼
-              Nettoyage des données
-                       │
-                       ▼
-              Analyse exploratoire
-                   (Power BI)
-                       │
-          ┌────────────┼────────────┐
-          ▼            ▼            ▼
-       Prix ↔       Prix ↔       Prix ↔
-      Surface       Qualité    Localisation
-          │            │            │
-          └────────────┼────────────┘
-                       ▼
-              Sélection des features
-                       │
-                       ▼
-              Séparation train / test
-                       │
-          ┌────────────┼────────────┐
-          ▼            ▼            ▼
-         SVR     Random Forest  Gradient Boosting
-          │            │            │
-          └────────────┼────────────┘
-                       ▼
-                  Grid search
-                       │
-                       ▼
-                  Comparaison
-                MAE / RMSE / R²
-                       │
-                       ▼
-             Application Flask + Docker
+   Dataset → Nettoyage → Exploration (Power BI) → Sélection des features
+        → Séparation train / test → SVR · Random Forest · Gradient Boosting
+        → Grid search → Comparaison (MAE / RMSE / R²) → Application Flask
 ```
 
-## Données et analyse
-
-### Le jeu de données
-
-Le jeu de données est **King County** (`kc_house_data.csv`) : 21 613 ventes de maisons entre 2014 et 2015, avec 21 colonnes (prix, chambres, salles de bain, surface habitable, surface du terrain, étages, front de mer, vue, état, grade, année de construction, année de rénovation, code postal, latitude, longitude et surfaces des voisins). Les fichiers Madrid présents dans `data/raw/` n'ont pas été utilisés.
-
-### Nettoyage des données
-
-Le nettoyage est fait dans `notebook.ipynb` :
+### 1. Nettoyage des données (`notebook.ipynb`)
 
 - **Date** : convertie en type date, puis supprimée. Les ventes ne couvrent que 2014-2015, son impact sur le prix est très faible.
 - **Valeurs manquantes** : aucune dans le jeu de données, aucune imputation n'est nécessaire.
@@ -425,116 +308,55 @@ Le nettoyage est fait dans `notebook.ipynb` :
 - **Valeurs aberrantes** : 217 prix aberrants sont détectés par trois méthodes à la fois (IQR, Z-score modifié, percentiles). Ce sont de vraies maisons de luxe, pas des erreurs : elles sont conservées. Leur poids est limité en prenant `log(price)` comme cible et des modèles peu sensibles aux valeurs extrêmes.
 - **Standardisation** : réalisée dans le pipeline de modélisation, après la séparation train / test, pour éviter toute fuite de données.
 
-Le fichier nettoyé (21 606 lignes) est enregistré dans `data/clean/kc_house_data_clean.csv`.
-
-### Analyse exploratoire
-
-L'analyse exploratoire se trouve dans le dashboard Power BI `analysis_explo.pbix`. Principaux constats sur les données nettoyées :
+### 2. Analyse exploratoire (`analysis_explo.pbix`, Power BI)
 
 - Le prix médian est de **450 000 $** et le prix moyen de 540 000 $. Le maximum atteint 7 700 000 $. La distribution est fortement étalée vers la droite (asymétrie d'environ 4).
 - Le prix est surtout lié à la **taille** et à la **qualité** : corrélation de 0,70 avec la surface habitable et de 0,67 avec le grade de construction.
 - La **localisation** compte beaucoup : prix médian de 1 400 000 $ pour les maisons en front de mer contre 450 000 $ pour les autres. Selon les 70 codes postaux, le prix médian va de 235 000 $ (98002) à 1 892 500 $ (98039).
 - L'année de construction et l'état n'ont presque aucun lien direct avec le prix.
 
-Un export du dashboard dans un format consultable (PDF) reste à ajouter à côté du fichier `.pbix`.
+### 3. Sélection des features (`notebook.ipynb`)
 
-## Algorithmes utilisés
+Nous partons de 17 variables candidates. Toutes les garder apporte du bruit, de la redondance (`sqm_living` et `sqm_above` disent presque la même chose) et un modèle plus difficile à expliquer. Quatre méthodes de sélection sont comparées, sur le **jeu d'entraînement uniquement**, avec `log(price)` comme cible. `zipcode` est un code et non une quantité : il est testé séparément à la fin.
 
-Huit algorithmes de régression ont été étudiés (voir [Veille](#veille)). Trois ont été retenus :
+| Méthode | Principe | Résultat |
+| --- | --- | --- |
+| **Corrélation** | À quel point chaque variable évolue avec le prix (de -1 à +1). | `grade` (0,70) et `sqm_living` (0,69) sont les plus liées. `sqm_living` et `sqm_above` sont redondantes (0,88). |
+| **Importance d'un Random Forest** | Combien chaque variable aide les arbres à réduire l'erreur. | `grade`, `lat` et `sqm_living` portent environ 82 % de l'importance. |
+| **Boruta** | Une variable n'est gardée que si elle fait mieux que des copies mélangées (du pur bruit). | Garde 12 variables sur 17. |
+| **Forward selection** | Ajoute les variables une par une, tant que le score s'améliore assez. | Garde 7 variables. |
 
-| Algorithme | Principe |
-| --- | --- |
-| **Support Vector Regression (SVR)** | Régression avec une marge d'erreur (tube ε) : les erreurs dans la marge ne sont pas pénalisées, ce qui rend le modèle moins sensible aux valeurs aberrantes. Demande des données standardisées. |
-| **Random Forest** | Fait la moyenne des prédictions de nombreux arbres de décision entraînés indépendamment sur des parties aléatoires des données et des variables. Robuste et peu sensible aux valeurs extrêmes. |
-| **Gradient Boosting** | Construit des arbres les uns après les autres, chacun corrigeant les erreurs des précédents. Souvent le plus précis sur des données tabulaires. |
+Nous gardons les variables choisies par **au moins 3 méthodes sur 4**, plus `long` (seulement 2 votes, mais une position demande les deux coordonnées).
 
-### Sélection des features
+**Features finales (7) :** `grade`, `sqm_living`, `sqm_lot`, `waterfront`, `view`, `lat`, `long`, qui couvrent la **taille**, la **qualité** et la **localisation**.
 
-- **Cible :** `y = price` (modélisée sous la forme `log(price)`).
-- **Exclues :** `price` elle-même, ainsi que `sqm_price_per_living` et `sqm_price_per_lot`, car elles sont calculées à partir du prix et donneraient la réponse au modèle.
-- **Features candidates :**
-
-| Groupe | Variables |
-| --- | --- |
-| Caractéristiques du logement | `bedrooms`, `bathrooms`, `floors`, `sqm_living`, `sqm_lot`, `sqm_above`, `sqm_basement` |
-| Qualité | `grade`, `condition`, `view`, `waterfront` |
-| Ancienneté / rénovation | `yr_built`, `yr_renovated` |
-| Localisation | `zipcode`, `lat`, `long` |
-| Environnement proche | `sqm_living15`, `sqm_lot15` |
-
-#### Pourquoi sélectionner des features
-
-Nous partons de 17 variables candidates, et toutes les garder pose des problèmes : du bruit (une variable inutile peut faire apprendre au modèle des coïncidences), de la redondance (`sqm_living` et `sqm_above` disent presque la même chose) et un modèle plus lourd et plus difficile à expliquer. Chaque méthode de sélection regarde les données sous un angle différent, donc aucune n'est fiable seule : nous en comparons quatre, puis nous gardons les variables sur lesquelles elles s'accordent.
-
-La sélection est faite sur le **jeu d'entraînement uniquement**, avec `log(price)` comme cible. `zipcode` est mis de côté pour les quatre méthodes, car c'est un code et non une quantité (98039 n'est pas « plus grand » que 98002) ; il est donc testé séparément à la fin.
-
-#### Les quatre méthodes
-
-| Méthode | Principe | Résultat | Limite |
-| --- | --- | --- | --- |
-| **Corrélation** | Mesure à quel point chaque variable évolue avec le prix (de -1 à +1). | `grade` (0,70) et `sqm_living` (0,69) sont les plus liées. `condition`, `long` et `yr_built` presque pas. `sqm_living` et `sqm_above` sont redondantes (0,88). | Ne voit que les liens en ligne droite : `long` paraît inutile alors que la position compte. |
-| **Importance d'un Random Forest** | Mesure combien chaque variable aide les arbres d'un Random Forest à réduire l'erreur. | `grade`, `lat` et `sqm_living` portent environ 82 % de l'importance. | Des variables semblables se partagent l'importance : l'une peut sembler inutile alors que son information est dans l'autre. |
-| **Boruta** | Crée des copies mélangées de chaque variable (du pur bruit). Une variable n'est gardée que si elle fait mieux que la meilleure copie bruitée. | Garde 12 variables sur 17. Écarte `bedrooms`, `floors`, `sqm_basement`, `yr_renovated`, `condition`. | La plus permissive : garde tout ce qui est meilleur que du bruit, même si c'est peu utile. |
-| **Forward selection** | Part de zéro variable et ajoute, une par une, celle qui améliore le plus le score, jusqu'à ce que le gain soit trop faible. | Garde 7 variables : `waterfront`, `view`, `grade`, `lat`, `long`, `sqm_living`, `sqm_lot`. | Lente, et le choix dépend de l'ordre d'ajout. C'est la plus compacte, car elle évite les variables redondantes. |
-
-#### Comment le choix final a été fait
-
-Chaque méthode vote pour les variables qu'elle garde. `grade`, `sqm_living` et `lat` ont 4 votes sur 4, et `waterfront`, `view` et `sqm_lot` en ont 3. Nous gardons les variables choisies par **au moins 3 méthodes sur 4**, plus `long` : elle n'a que 2 votes, mais `lat` seule ne donne que l'axe nord-sud, et une position demande les deux coordonnées.
-
-**Features finales (7) :** `grade`, `sqm_living`, `sqm_lot`, `waterfront`, `view`, `lat`, `long`. Elles couvrent les trois idées vues dans l'exploration : la **taille** (`sqm_living`, `sqm_lot`), la **qualité** (`grade`, `view`, `waterfront`) et la **localisation** (`lat`, `long`).
-
-#### Vérifications
-
-Une bonne sélection doit garder la performance avec moins de variables. R² d'un Random Forest (sur le logarithme du prix, validation croisée sur le jeu d'entraînement ; le R² est la part de la variation des prix expliquée par le modèle) :
+Vérification (R² d'un Random Forest, validation croisée sur le jeu d'entraînement, sur `log(price)`) :
 
 | Variables | R² |
 | --- | --- |
 | Les 17 features | 0,8805 |
 | Les 7 features finales | 0,8771 |
 | 6 features, sans `long` | 0,8337 |
+| 7 features finales + `zipcode` (One-Hot) | 0,8778 |
 
-- Avec moins de la moitié des variables, le score ne baisse que de 0,003.
-- Retirer `long` coûte 0,04, ce qui confirme qu'il fallait le garder.
-- **Localisation :** ajouter `zipcode` (One-Hot Encoding) donne 0,8778, soit un gain de 0,0007 seulement, car `lat` et `long` décrivent déjà la localisation. `lat` + `long` est donc conservé : plus simple, et environ 70 colonnes économisées.
+Avec moins de la moitié des variables, le score ne baisse que de 0,003. `zipcode` n'apporte que 0,0007, pour environ 70 colonnes en plus : `lat` + `long` est donc conservé.
 
-### Pipelines de modélisation
+### 4. Modèles testés (`notebook_conclusion.ipynb`)
 
-Les 7 features finales sont toutes numériques (`zipcode` n'a pas été gardé), il n'y a donc pas d'étape d'encodage. Le SVR mesure des distances entre les maisons : ses variables sont donc standardisées (`StandardScaler`) dans un `Pipeline`, avec une moyenne et un écart-type appris sur les données d'entraînement uniquement. Les modèles à base d'arbres n'en ont pas besoin.
+Huit algorithmes de régression ont été étudiés (voir [Annexe : veille](#veille)). Trois ont été retenus, car le prix est très asymétrique, comporte de fortes valeurs aberrantes et des liens non linéaires avec les variables :
 
-```text
-       Données (7 features, cible log(price))
-                       │
-                       ▼
-   Séparation train / test (80 / 20, random_state=42)
-                       │
-          ┌────────────┴─────────────┐
-          ▼                          ▼
-    StandardScaler          (pas de mise à l'échelle)
-          │                   ┌──────┴──────┐
-          ▼                   ▼             ▼
-         SVR            Random Forest  Gradient Boosting
-          │                   │             │
-          └───────────────────┼─────────────┘
-                              ▼
-       Prédiction de log(price) → exp() → prix en $
-```
+| Algorithme | Principe |
+| --- | --- |
+| **Support Vector Regression (SVR)** | Régression avec une marge d'erreur (tube ε) : les erreurs dans la marge ne sont pas pénalisées. Demande des données standardisées (`StandardScaler` dans un `Pipeline`). |
+| **Random Forest** | Fait la moyenne des prédictions de nombreux arbres de décision entraînés indépendamment sur des parties aléatoires des données. |
+| **Gradient Boosting** | Construit des arbres les uns après les autres, chacun corrigeant les erreurs des précédents. |
 
-### Évaluation et comparaison
+Tous les modèles utilisent la même séparation (80 / 20, `random_state=42`) : 17 284 maisons pour l'entraînement, 4 322 pour le test.
 
-La modélisation se trouve dans `notebook_conclusion.ipynb`. Tous les modèles sont entraînés et testés sur les mêmes maisons (même séparation, `random_state=42`).
+- Les **choix** (réglages, meilleur modèle) sont faits avec la **MAE en validation croisée** sur le jeu d'entraînement (5 parts), calculée sur `log(price)` : 0,13 veut dire une prédiction à environ 13 % du vrai prix.
+- Le **jeu de test** ne sert qu'à la fin, une seule fois, pour donner les scores finaux.
 
-- Les **choix** (meilleurs réglages, meilleur modèle) sont faits avec la **MAE en validation croisée** sur le jeu d'entraînement (5 parts). Elle est calculée sur `log(price)` : 0,13 veut dire une prédiction à environ 13 % du vrai prix.
-- Le **jeu de test** (4 322 maisons) ne sert qu'à la fin, une seule fois, pour donner les scores finaux.
-
-Les scores finaux utilisent trois métriques :
-
-- **MAE** : erreur absolue moyenne, en dollars.
-- **RMSE** : racine de l'erreur quadratique moyenne, plus sensible aux grosses erreurs.
-- **R²** : part de la variance du prix expliquée par le modèle (calculé sur `log(price)`).
-
-### Grid search
-
-Pour chaque modèle, la grid search essaie toutes les combinaisons de 3 hyperparamètres et garde celle qui a la meilleure MAE en validation croisée.
+### 5. Grid search
 
 | Modèle | Valeurs testées | Meilleure combinaison | Temps |
 | --- | --- | --- | --- |
@@ -542,7 +364,15 @@ Pour chaque modèle, la grid search essaie toutes les combinaisons de 3 hyperpar
 | Random Forest | `n_estimators` : 100, 300, 500 · `max_depth` : 10, 20, None · `max_features` : 0.33, 0.5, 1.0 | `n_estimators=500`, `max_depth=20`, `max_features=0.5` | 797 s |
 | Gradient Boosting | `n_estimators` : 200, 500, 1000 · `learning_rate` : 0.03, 0.1, 0.3 · `max_depth` : 3, 5, 7 | `n_estimators=500`, `learning_rate=0.03`, `max_depth=7` | 455 s |
 
-### Résultats
+### 6. Choix final
+
+Le **Gradient Boosting réglé par grid search** (500 arbres, learning rate 0,03, profondeur 7) a le meilleur score en validation croisée, et il est aussi le meilleur sur le jeu de test. Il est enregistré dans `models/best_model.joblib` et utilisé par l'application Flask.
+
+## Résultats
+
+**Sur des maisons qu'il n'avait jamais vues, le modèle estime le prix avec une erreur d'environ 13 % en moyenne, soit environ 68 000 $ par maison, et il explique environ 89 % des écarts de prix entre les maisons.**
+
+Métriques détaillées (jeu de test de 4 322 maisons ; MAE CV et R² calculés sur `log(price)`) :
 
 | Modèle | Réglages | MAE CV (log) | MAE test | RMSE test | R² test |
 | --- | --- | --- | --- | --- | --- |
@@ -553,40 +383,93 @@ Pour chaque modèle, la grid search essaie toutes les combinaisons de 3 hyperpar
 | Gradient Boosting | par défaut | 0,1409 | 76 852 $ | 139 662 $ | 0,8708 |
 | **Gradient Boosting** | **grid search** | **0,1261** | **68 455 $** | **124 199 $** | **0,8920** |
 
-- Le **Gradient Boosting** est celui qui gagne le plus avec la grid search : sa MAE de test passe de 76 852 $ à 68 455 $ (-11 %). Il devient le meilleur modèle, en validation croisée comme sur le jeu de test.
+- Le **Gradient Boosting** est celui qui gagne le plus avec la grid search : sa MAE de test passe de 76 852 $ à 68 455 $ (-11 %, soit -8 397 $).
 - Le **Random Forest** était déjà bon avec ses réglages par défaut : le gain est faible (environ 1 000 $).
-- **SVR** : la MAE s'améliore, mais la RMSE se dégrade (175 746 $ au lieu de 155 399 $). Le SVR réglé est meilleur sur la plupart des maisons, mais fait quelques erreurs plus grosses, sans doute sur les maisons chères.
-- Plusieurs meilleures valeurs sont au **bord de leur grille** (`gamma` et `epsilon` pour le SVR, `n_estimators` pour le Random Forest, `learning_rate` et `max_depth` pour le Gradient Boosting) : la meilleure valeur est peut-être en dehors de la grille, une grille plus large pourrait donc encore améliorer un peu les scores.
+- **SVR** : la MAE s'améliore, mais la RMSE se dégrade (175 746 $ au lieu de 155 399 $) : meilleur sur la plupart des maisons, mais quelques erreurs plus grosses, sans doute sur les maisons chères.
 
-## Application Flask
+## Limites et pistes d'amélioration
 
-`app.py` est une petite application web. Elle charge `models/best_model.joblib` une seule fois au démarrage, puis affiche un formulaire (`templates/index.html`) avec les 7 features. Quand le formulaire est envoyé, le modèle prédit `log(price)` et l'application applique `exp()` pour afficher le prix estimé en dollars. Le modèle n'est pas entraîné dans l'application : l'entraînement est fait dans `notebook_conclusion.ipynb`.
+**Limites**
 
-## Docker
+- Un seul comté et seulement deux ans de ventes (2014-2015) : les prix ne suivent pas le marché actuel.
+- Pas d'information sur l'état intérieur ou le quartier exact.
+- Les maisons de luxe sont rares, donc plus difficiles à prédire.
 
-`flask.dockerfile` place l'application Flask dans un conteneur, pour pouvoir la lancer sans installer Python ni les bibliothèques. L'image utilise Python 3.13 (la même version que nos environnements) et installe `requirements.txt` : les versions des bibliothèques sont donc celles qui ont servi à entraîner le modèle (un fichier `.joblib` peut ne pas se charger avec une autre version de scikit-learn). Seuls `app.py`, `templates/` et `models/` sont copiés : les données et les notebooks ne servent pas à prédire.
+**Pistes d'amélioration**
 
-Construire l'image, puis lancer le conteneur :
+- Des données plus récentes, d'autres modèles, plus de variables de localisation (distance au centre, écoles).
+- Un intervalle de prédiction plutôt qu'une valeur unique.
+- Une grid search plus large : plusieurs meilleures valeurs sont au bord de leur grille (`gamma` et `epsilon` pour le SVR, `n_estimators` pour le Random Forest, `learning_rate` et `max_depth` pour le Gradient Boosting).
+- **Déploiement avec Docker** : une première version de `flask.dockerfile` est dans le dépôt, mais l'application conteneurisée n'a pas encore été validée. La finaliser et la tester est la prochaine étape.
+- Un export du dashboard Power BI dans un format consultable (PDF) à côté du fichier `.pbix`.
 
+## Structure du dépôt
+
+| Fichier / dossier | Rôle |
+| --- | --- |
+| `data/raw/` | Données brutes (King County et Madrid) et leurs descriptions |
+| `data/clean/` | Données nettoyées (`kc_house_data_clean.csv`) et un fichier de features (`kc_house_features.csv`) |
+| `data/images/` | Schémas illustrant les algorithmes de régression |
+| `notebook.ipynb` | Nettoyage des données, premières visualisations et sélection des features |
+| `analysis_explo.pbix` | Dashboard d'analyse exploratoire (Power BI) |
+| `notebook_conclusion.ipynb` | Étude des algorithmes, entraînement, grid search et comparaison des 3 modèles, enregistrement du meilleur modèle |
+| `models/best_model.joblib` | Meilleur modèle (Gradient Boosting, 6,8 Mo) |
+| `app.py` | Application Flask : un formulaire qui estime le prix d'une maison avec le modèle enregistré |
+| `templates/index.html` | Page HTML de l'application Flask |
+| `flask.dockerfile` | Première version du Dockerfile (pas encore validée) |
+| `requirements.txt` | Dépendances Python |
+
+## Installation et exécution
+
+Nécessite **Python 3.13** (la version utilisée pour entraîner le modèle : le fichier `.joblib` n'est garanti qu'avec la même version de scikit-learn, fixée dans `requirements.txt`).
+
+```bash
+git clone https://github.com/axel-achart/apartment-hunter.git
+cd apartment-hunter
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
-docker build -f flask.dockerfile -t apartment-hunter .
-docker run -p 5000:5000 apartment-hunter
+
+**Lancer l'application web :**
+
+```bash
+python app.py
 ```
 
-L'application est ensuite disponible sur http://localhost:5000.
+Ouvrir ensuite http://localhost:5000, remplir les 7 caractéristiques et valider pour obtenir le prix estimé. Avec les valeurs par défaut du formulaire, l'application renvoie une estimation de 471 336 $.
 
-## Conclusion
+**Ouvrir les notebooks :** ouvrir `notebook.ipynb` puis `notebook_conclusion.ipynb` dans VS Code ou Jupyter (le noyau `ipykernel` est installé par `requirements.txt`). Les sorties sont enregistrées dans les notebooks : ils se lisent sans être relancés. Relancer les 3 grid searches prend environ 30 minutes.
 
-**Oui, le prix peut être estimé avec une erreur d'environ 13 %.** Le meilleur modèle est le **Gradient Boosting** réglé par grid search (500 arbres, learning rate 0,03, profondeur 7). Sur les 4 322 maisons de test, son erreur moyenne est de **68 455 $**, avec une RMSE de 124 199 $ et un R² de 0,892. La grid search a réduit son erreur de 8 397 $ par rapport à ses réglages par défaut. Il est enregistré dans `models/best_model.joblib` et utilisé par l'application Flask.
+## Équipe
 
-- **Les limites** : un seul comté et seulement deux ans de ventes (2014-2015), donc des prix qui ne suivent pas le marché actuel ; pas d'information sur l'état intérieur ou le quartier exact ; les maisons de luxe sont rares, donc plus difficiles à prédire.
-- **Les pistes d'amélioration** : des données plus récentes, d'autres modèles, plus de variables de localisation (distance au centre, écoles), un intervalle de prédiction plutôt qu'une valeur unique, une grid search plus large pour les réglages trouvés au bord de leur grille.
+Projet réalisé à **LaPlateforme_** (Marseille), **Bachelor IA / Data**, en septembre et octobre 2026.
 
-## Veille
+| Nom | GitHub |
+| --- | --- |
+| Axel Achart | [axel-achart](https://github.com/axel-achart) |
+| Hippolyte Geslain | [Hippolyte-Geslain](https://github.com/Hippolyte-Geslain) |
+| Kylliann Larcher | [kylliann-larcher](https://github.com/kylliann-larcher) |
 
-La veille porte sur deux sujets : les algorithmes de régression et le choix des modèles (l'étude complète, avec un schéma par algorithme, se trouve dans `notebook_conclusion.ipynb`), puis Docker, utilisé pour déployer l'application.
+## Stack technique
+
+- **Langage :** Python 3.13
+- **Données :** pandas, NumPy
+- **Visualisation :** matplotlib, seaborn, Power BI
+- **Machine learning :** scikit-learn (SVR, Random Forest, Gradient Boosting, GridSearchCV, Pipeline), Boruta, joblib
+- **Application web :** Flask, HTML
+- **Outils :** notebooks Jupyter, Git / GitHub, Docker (en cours)
+
+<a id="veille"></a>
+
+## Annexe : veille
 
 ### Les huit algorithmes étudiés
+
+L'étude complète, avec un schéma par algorithme, se trouve dans `notebook_conclusion.ipynb`.
 
 | Algorithme | En une ligne |
 | --- | --- |
@@ -599,49 +482,22 @@ La veille porte sur deux sujets : les algorithmes de régression et le choix des
 | Random Forest | Fait la moyenne de nombreux arbres de décision indépendants pour être robuste et précis. |
 | Elastic Net | Régression linéaire qui réduit aussi les coefficients (Lasso + Ridge) pour écarter les variables inutiles. |
 
-### Pourquoi ces trois modèles
-
-SVR, Random Forest et Gradient Boosting ont été choisis parce qu'ils conviennent à nos données :
-
-- Le prix est très asymétrique et comporte de fortes valeurs aberrantes : le SVR (marge d'erreur) et les modèles à base d'arbres s'en accommodent mieux qu'un simple modèle linéaire.
-- Les liens entre le prix et les variables ne sont pas linéaires (par exemple `grade`, ou la localisation avec `lat` et `long`) : les arbres les captent sans qu'il faille construire de nouvelles variables.
-- Avec environ 21 600 lignes, ces modèles s'entraînent en un temps raisonnable.
-
-Les autres ont été écartés : les régressions linéaire, multiple et polynomiale sont trop simples pour cette relation non linéaire (ou surapprennent pour la polynomiale), la régression de Poisson est faite pour des comptages et non pour des prix, et Elastic Net est linéaire, donc il pourrait au mieux servir de simple point de comparaison.
+**Pourquoi SVR, Random Forest et Gradient Boosting :** le prix est très asymétrique avec de fortes valeurs aberrantes (le SVR et les arbres s'en accommodent mieux qu'un modèle linéaire), les liens avec les variables ne sont pas linéaires (les arbres les captent directement), et avec environ 21 600 lignes ces modèles s'entraînent en un temps raisonnable. Les régressions linéaire, multiple et polynomiale sont trop simples (ou surapprennent), la régression de Poisson est faite pour des comptages, et Elastic Net est linéaire : il pourrait au mieux servir de point de comparaison.
 
 ### Docker
 
-**Ce que c'est.** Docker emballe une application avec tout ce dont elle a besoin (Python, bibliothèques, fichiers) pour qu'elle tourne de la même façon sur n'importe quel ordinateur. Il répond au classique « ça marche sur ma machine ».
-
-**Le vocabulaire.**
+**Ce que c'est.** Docker emballe une application avec tout ce dont elle a besoin (Python, bibliothèques, fichiers) pour qu'elle tourne de la même façon sur n'importe quel ordinateur.
 
 | Terme | Signification |
 | --- | --- |
 | Dockerfile | Fichier texte qui décrit les étapes pour construire l'image (ici `flask.dockerfile`). |
-| Image | Paquet figé construit à partir du Dockerfile. C'est la « recette » prête à l'emploi. |
+| Image | Paquet figé construit à partir du Dockerfile. |
 | Conteneur | Une image en cours d'exécution. On peut lancer plusieurs conteneurs à partir de la même image. |
-| Docker Hub | Registre en ligne d'images (par exemple l'image officielle `python` dont on part). |
+| Docker Hub | Registre en ligne d'images (par exemple l'image officielle `python`). |
 | Couche (layer) | Chaque instruction du Dockerfile crée une couche, gardée en cache si rien n'a changé. |
 
-**Conteneur ou machine virtuelle ?** Une machine virtuelle émule un ordinateur complet avec son propre système d'exploitation : elle est lourde (plusieurs Go) et lente à démarrer. Un conteneur partage le noyau du système de la machine hôte : il est léger (quelques centaines de Mo) et démarre en quelques secondes. C'est pour cela que les conteneurs sont très utilisés pour déployer des applications web et des modèles de ML.
+**Conteneur ou machine virtuelle ?** Une machine virtuelle émule un ordinateur complet avec son propre système d'exploitation : lourde (plusieurs Go) et lente à démarrer. Un conteneur partage le noyau de la machine hôte : léger (quelques centaines de Mo) et démarre en quelques secondes.
 
-**Pourquoi Docker dans ce projet.** Le modèle `.joblib` ne se charge qu'avec la même version de scikit-learn que celle de l'entraînement. L'image fixe Python 3.13 et installe `requirements.txt` : n'importe qui peut lancer l'application en deux commandes, sans installer Python.
+**Pourquoi Docker dans ce projet.** Le modèle `.joblib` ne se charge qu'avec la même version de scikit-learn que celle de l'entraînement. Une image qui fixe Python 3.13 et installe `requirements.txt` permettrait à n'importe qui de lancer l'application sans installer Python. Les commandes prévues sont `docker build -f flask.dockerfile -t apartment-hunter .` puis `docker run -p 5000:5000 apartment-hunter` ; ce déploiement reste à valider.
 
-**Bonnes pratiques appliquées dans `flask.dockerfile`.**
-
-- Une image de base `slim`, plus légère que l'image complète.
-- `requirements.txt` copié et installé avant le code : quand seul `app.py` change, Docker réutilise la couche des bibliothèques en cache et la construction est bien plus rapide.
-- `pip install --no-cache-dir` pour que le cache de pip ne reste pas dans l'image.
-- Seuls les fichiers utiles pour prédire sont copiés (`app.py`, `templates/`, `models/`), pas les données ni les notebooks.
-
-**Commandes utiles.**
-
-| Commande | Rôle |
-| --- | --- |
-| `docker build -f flask.dockerfile -t apartment-hunter .` | Construire l'image |
-| `docker run -p 5000:5000 apartment-hunter` | Lancer un conteneur (le port du PC renvoie vers le port du conteneur) |
-| `docker ps` | Lister les conteneurs en cours |
-| `docker images` | Lister les images |
-| `docker stop <id>` | Arrêter un conteneur |
-
-
+**Bonnes pratiques visées dans `flask.dockerfile` :** une image de base `slim`, `requirements.txt` installé avant la copie du code (réutilisation du cache), `pip install --no-cache-dir`, et seuls les fichiers utiles pour prédire copiés (`app.py`, `templates/`, `models/`).
