@@ -1,19 +1,19 @@
-# Même version de Python que nos .venv
+# Our python version
 FROM python:3.13-slim
 
 WORKDIR /app
 
-# On installe les dépendances avec les mêmes versions que pour l'entraînement,
-# sinon le modèle .joblib risque de ne pas se charger
+# We install the dependencies using the same versions as those used for training;
+# otherwise, the .joblib model might fail to load.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# On copie seulement ce dont l'app a besoin pour prédire
+# We only copy what the app needs to make predictions
 COPY app.py .
 COPY templates/ templates/
 COPY models/ models/
 
-# Port utilisé par Flask
+# Port used by Flask
 EXPOSE 5000
 
 CMD ["python", "app.py"]
