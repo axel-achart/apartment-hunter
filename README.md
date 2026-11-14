@@ -23,7 +23,7 @@ Buying or selling a house starts with one question: what is it worth? An estimat
 
 **Problem statement:** can we estimate the sale price of a house in King County (Seattle area, USA) from its characteristics, and how accurate can this estimate be?
 
-To answer, we clean and explore a real sales dataset, study several regression algorithms, train and compare three of them, then use the best one in a Flask web application.
+To answer, we clean and explore a real sales dataset, study several regression algorithms, train and compare three of them, then use the best one in a Flask web application, containerized with Docker.
 
 ## Data
 
@@ -149,7 +149,6 @@ Detailed metrics (test set of 4,322 houses; CV MAE and R² computed on `log(pric
 - More recent data, other models, more location features (distance to the center, schools).
 - A prediction interval instead of a single value.
 - A wider grid search: several best values are at the edge of their grid (`gamma` and `epsilon` for the SVR, `n_estimators` for the Random Forest, `learning_rate` and `max_depth` for the Gradient Boosting).
-- **Docker deployment**: a first `flask.dockerfile` is in the repository, but the containerized application has not been validated yet. Finishing and testing it is the next step.
 - An export of the Power BI dashboard in a readable format (PDF) next to the `.pbix` file.
 
 ## Repository structure
@@ -165,7 +164,7 @@ Detailed metrics (test set of 4,322 houses; CV MAE and R² computed on `log(pric
 | `models/best_model.joblib` | Best model (Gradient Boosting, 6.8 MB) |
 | `app.py` | Flask application: a form that estimates the price of a house with the saved model |
 | `templates/index.html` | HTML page of the Flask application |
-| `flask.dockerfile` | First version of the Dockerfile (not validated yet) |
+| `flask.dockerfile` | Dockerfile to run the Flask application in a container |
 | `requirements.txt` | Python dependencies |
 
 ## Installation and usage
@@ -191,6 +190,15 @@ python app.py
 
 Then open http://localhost:5000, fill in the 7 characteristics and click to get the estimated price. With the default values of the form, the app returns an estimate of 471,336 $.
 
+**Or launch it with Docker** (no Python installation needed):
+
+```bash
+docker build -f flask.dockerfile -t apartment-hunter .
+docker run -p 5000:5000 apartment-hunter
+```
+
+The application is then available at http://localhost:5000.
+
 **Open the notebooks:** open `notebook.ipynb` then `notebook_conclusion.ipynb` in VS Code or Jupyter (the `ipykernel` kernel is installed by `requirements.txt`). The outputs are saved in the notebooks, so they can be read without running them. Running the 3 grid searches takes about 30 minutes.
 
 ## Team
@@ -210,7 +218,7 @@ Project made at **LaPlateforme_** (Marseille), **Bachelor AI / Data**, in Septem
 - **Visualization:** matplotlib, seaborn, Power BI
 - **Machine learning:** scikit-learn (SVR, Random Forest, Gradient Boosting, GridSearchCV, Pipeline), Boruta, joblib
 - **Web application:** Flask, HTML
-- **Tools:** Jupyter notebooks, Git / GitHub, Docker (in progress)
+- **Tools:** Jupyter notebooks, Git / GitHub, Docker
 
 <a id="watch"></a>
 
@@ -247,9 +255,9 @@ The full study, with one diagram per algorithm, is in `notebook_conclusion.ipynb
 
 **Container or virtual machine?** A virtual machine emulates a full computer with its own operating system: heavy (several GB) and slow to start. A container shares the kernel of the host: light (a few hundred MB) and starts in seconds.
 
-**Why Docker in this project.** The `.joblib` model only loads with the same scikit-learn version as the one used for training. An image that fixes Python 3.13 and installs `requirements.txt` would let anyone launch the application without installing Python. The planned commands are `docker build -f flask.dockerfile -t apartment-hunter .` then `docker run -p 5000:5000 apartment-hunter`; this deployment is still to be validated.
+**Why Docker in this project.** The `.joblib` model only loads with the same scikit-learn version as the one used for training. The image fixes Python 3.13 and installs `requirements.txt`, so anyone can launch the application with two commands, without installing Python (see [Installation and usage](#installation-and-usage)).
 
-**Good practices targeted in `flask.dockerfile`:** a `slim` base image, `requirements.txt` installed before copying the code (cache reuse), `pip install --no-cache-dir`, and only the files needed to predict copied (`app.py`, `templates/`, `models/`).
+**Good practices applied in `flask.dockerfile`:** a `slim` base image, `requirements.txt` installed before copying the code (cache reuse), `pip install --no-cache-dir`, and only the files needed to predict copied (`app.py`, `templates/`, `models/`).
 
 ---
 
@@ -274,7 +282,7 @@ Acheter ou vendre une maison commence par une question : combien vaut-elle ? Une
 
 **Problématique :** peut-on estimer le prix de vente d'une maison du comté de King (région de Seattle, États-Unis) à partir de ses caractéristiques, et avec quelle précision ?
 
-Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes, étudions plusieurs algorithmes de régression, entraînons et comparons trois d'entre eux, puis utilisons le meilleur dans une application web Flask.
+Pour y répondre, nous nettoyons et explorons un vrai jeu de données de ventes, étudions plusieurs algorithmes de régression, entraînons et comparons trois d'entre eux, puis utilisons le meilleur dans une application web Flask, conteneurisée avec Docker.
 
 ## Données
 
@@ -400,7 +408,6 @@ Métriques détaillées (jeu de test de 4 322 maisons ; MAE CV et R² calculés 
 - Des données plus récentes, d'autres modèles, plus de variables de localisation (distance au centre, écoles).
 - Un intervalle de prédiction plutôt qu'une valeur unique.
 - Une grid search plus large : plusieurs meilleures valeurs sont au bord de leur grille (`gamma` et `epsilon` pour le SVR, `n_estimators` pour le Random Forest, `learning_rate` et `max_depth` pour le Gradient Boosting).
-- **Déploiement avec Docker** : une première version de `flask.dockerfile` est dans le dépôt, mais l'application conteneurisée n'a pas encore été validée. La finaliser et la tester est la prochaine étape.
 - Un export du dashboard Power BI dans un format consultable (PDF) à côté du fichier `.pbix`.
 
 ## Structure du dépôt
@@ -416,7 +423,7 @@ Métriques détaillées (jeu de test de 4 322 maisons ; MAE CV et R² calculés 
 | `models/best_model.joblib` | Meilleur modèle (Gradient Boosting, 6,8 Mo) |
 | `app.py` | Application Flask : un formulaire qui estime le prix d'une maison avec le modèle enregistré |
 | `templates/index.html` | Page HTML de l'application Flask |
-| `flask.dockerfile` | Première version du Dockerfile (pas encore validée) |
+| `flask.dockerfile` | Dockerfile pour lancer l'application Flask dans un conteneur |
 | `requirements.txt` | Dépendances Python |
 
 ## Installation et exécution
@@ -442,6 +449,15 @@ python app.py
 
 Ouvrir ensuite http://localhost:5000, remplir les 7 caractéristiques et valider pour obtenir le prix estimé. Avec les valeurs par défaut du formulaire, l'application renvoie une estimation de 471 336 $.
 
+**Ou la lancer avec Docker** (sans installer Python) :
+
+```bash
+docker build -f flask.dockerfile -t apartment-hunter .
+docker run -p 5000:5000 apartment-hunter
+```
+
+L'application est ensuite disponible sur http://localhost:5000.
+
 **Ouvrir les notebooks :** ouvrir `notebook.ipynb` puis `notebook_conclusion.ipynb` dans VS Code ou Jupyter (le noyau `ipykernel` est installé par `requirements.txt`). Les sorties sont enregistrées dans les notebooks : ils se lisent sans être relancés. Relancer les 3 grid searches prend environ 30 minutes.
 
 ## Équipe
@@ -461,7 +477,7 @@ Projet réalisé à **LaPlateforme_** (Marseille), **Bachelor IA / Data**, en se
 - **Visualisation :** matplotlib, seaborn, Power BI
 - **Machine learning :** scikit-learn (SVR, Random Forest, Gradient Boosting, GridSearchCV, Pipeline), Boruta, joblib
 - **Application web :** Flask, HTML
-- **Outils :** notebooks Jupyter, Git / GitHub, Docker (en cours)
+- **Outils :** notebooks Jupyter, Git / GitHub, Docker
 
 <a id="veille"></a>
 
@@ -498,6 +514,6 @@ L'étude complète, avec un schéma par algorithme, se trouve dans `notebook_con
 
 **Conteneur ou machine virtuelle ?** Une machine virtuelle émule un ordinateur complet avec son propre système d'exploitation : lourde (plusieurs Go) et lente à démarrer. Un conteneur partage le noyau de la machine hôte : léger (quelques centaines de Mo) et démarre en quelques secondes.
 
-**Pourquoi Docker dans ce projet.** Le modèle `.joblib` ne se charge qu'avec la même version de scikit-learn que celle de l'entraînement. Une image qui fixe Python 3.13 et installe `requirements.txt` permettrait à n'importe qui de lancer l'application sans installer Python. Les commandes prévues sont `docker build -f flask.dockerfile -t apartment-hunter .` puis `docker run -p 5000:5000 apartment-hunter` ; ce déploiement reste à valider.
+**Pourquoi Docker dans ce projet.** Le modèle `.joblib` ne se charge qu'avec la même version de scikit-learn que celle de l'entraînement. L'image fixe Python 3.13 et installe `requirements.txt` : n'importe qui peut lancer l'application en deux commandes, sans installer Python (voir [Installation et exécution](#installation-et-exécution)).
 
-**Bonnes pratiques visées dans `flask.dockerfile` :** une image de base `slim`, `requirements.txt` installé avant la copie du code (réutilisation du cache), `pip install --no-cache-dir`, et seuls les fichiers utiles pour prédire copiés (`app.py`, `templates/`, `models/`).
+**Bonnes pratiques appliquées dans `flask.dockerfile` :** une image de base `slim`, `requirements.txt` installé avant la copie du code (réutilisation du cache), `pip install --no-cache-dir`, et seuls les fichiers utiles pour prédire copiés (`app.py`, `templates/`, `models/`).
