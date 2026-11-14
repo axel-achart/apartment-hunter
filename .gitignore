@@ -1,0 +1,30 @@
+# Environnements virtuels
+.venv/
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+*.pyc
+
+# Variables d'environnement
+.env
+.env.local
+
+# Fichiers système et éditeur
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Claude
+.claude/
+SKILL.md
+
+# Editors and logs
+.idea/
+*.log
